@@ -1,7 +1,33 @@
-title: "OLET5602 Final Project: Transcription Factor Target Gene Prediction"
-author: "Declan Langreiter"
-output: html_document
+ Factor Target Gene Prediction through
+  Multi-Omics Datasets"
+author: "A. Kapoor, D. Langreiter"
+output:
+  pdf_document: default
+  html_document: default
 ---
+
+# Introduction
+
+**Aim:**  
+The aim of this project is to apply classification techniques to predict novel transcription factor target genes, focusing on Sox2 and Nanog during embryonic stem cell (ESC) differentiation.
+
+**Background:**  
+Transcriptional regulation is a fundamental process in all living organisms, driven by transcription factors that control mRNA expression. These transcriptional networks are crucial in development, lineage specification, and cell fate decisions during early embryonic development (Theunissen and Jaenisch, 2017). Recent advances in omics technologies allow for the profiling of genome-wide transcriptional and epigenetic events, providing a deeper understanding of these networks.
+
+In this project, we utilize high-temporal-resolution multi-omics data of ESC differentiation (Yang et al., 2019) to predict novel substrates of Sox2 and Nanog—two key transcription factors involved in maintaining pluripotency and guiding cell differentiation.
+
+**Dataset Overview:**
+- **Transcriptome:** Time-course mRNA profiles during ESC differentiation.
+- **Proteome:** Time-course protein expression profiles during ESC differentiation.
+- **Epigenome:** Time-course ESC differentation epigonme profiles of 6 histone marks.
+
+We will develop and validate a classification model to predict novel transcription factor target genes, focusing on Sox2 and Nanog, using the provided multi-omics datasets.
+
+# Data Preparation
+
+## Load Required Libraries and Data
+
+We start by loading the necessary R packages and the dataset `Final_Project_ESC.RData`, which contains the transcriptome, proteome, and epigenome data, along with a subset of known Sox2/Nanog target genes.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -28,6 +54,12 @@ suppressPackageStartupMessages({
     library(doParallel)
 })
 
+```
+
+## Filter and Combine Datasets
+To ensure consistency across datasets, we filter each dataset to include only the common genes present in all omics layers. We then combine these filtered datasets into a single data frame for further analysis
+
+```{r}
 # Ensure all data has the same set of genes
 genes <- intersect(rownames(Transcriptome), rownames(Proteome))
 genes <- intersect(genes, rownames(H3K4me3))
@@ -76,93 +108,73 @@ combined_data$label <- factor(label)
 
 # Check the initial label distribution
 print(table(combined_data$label))
+```
 
-# If using caret, create a balanced dataset using downsampling
+## Data Splitting and Balancing
+Train-Test Split
+The dataset is split into training (90%) and testing (10%) sets. The label column is reassigned to the test set to ensure that it is included correctly.
+
+```{r}
+# Split the dataset into training (90%) and testing (10%) sets
 set.seed(123)
-downsampled_data <- downSample(x = combined_data[, -ncol(combined_data)], 
-                               y = combined_data$label, 
-                               yname = "label")
+train_index <- createDataPartition(combined_data$label, p = 0.9, list = FALSE)
+
+train_data <- combined_data[train_index, ]
+test_data <- combined_data[-train_index, ]
+
+# Reassign the label column to test_data
+test_data$label <- combined_data[-train_index, "label"]
+
+# Check the distribution of labels in the training and test sets
+print("Training set label distribution:")
+print(table(train_data$label))
+
+print("Test set label distribution:")
+print(table(test_data$label))
+
+```
+
+## Balancing the Training Data
+Since the dataset is imbalanced, downsampling is used to create a balanced training dataset. This ensures that both classes (OSN and Other) are equally represented, improving the robustness of the classification model.
+
+```{r}
+# Balance the training data using downsampling
+set.seed(123)
+downsampled_train_data <- downSample(x = train_data[, -ncol(train_data)], 
+                                     y = train_data$label, 
+                                     yname = "label")
 
 # Check the balanced label distribution
-print(table(downsampled_data$label))
+print("Balanced training set label distribution:")
+print(table(downsampled_train_data$label))
 
-# Final check of dataset dimensions
-print(dim(downsampled_data))
+# Final check of training dataset dimensions
+print(dim(downsampled_train_data))
 
 ```
 
+# Model Training
+Train SVM and Random Forest Models
+We train two machine learning models, SVM and Random Forest, using the balanced training dataset.
+
 ```{r}
-# Train an SVM model
+# Train an SVM model on the downsampled training data
 set.seed(123)
-svm_model <- svm(label ~ ., data = downsampled_data, kernel = "radial", probability = TRUE)
+svm_model <- svm(label ~ ., data = downsampled_train_data, kernel = "radial", probability = TRUE)
 
-# Make predictions using the SVM model
-svm_pred <- predict(svm_model, newdata = downsampled_data[, -ncol(downsampled_data)], probability = TRUE)
-
-# Extract probabilities for the positive class (OSN)
-svm_prob <- attr(svm_pred, "probabilities")[, "OSN"]
-
-```
-
-
-```{r}
-# Train a Random Forest model
+# Train a Random Forest model on the downsampled training data
 set.seed(123)
-rf_model <- randomForest(label ~ ., data = downsampled_data, ntree = 500)
-
-# Make predictions using the Random Forest model
-rf_pred <- predict(rf_model, newdata = downsampled_data[, -ncol(downsampled_data)], type = "prob")[, "OSN"]
+rf_model <- randomForest(label ~ ., data = downsampled_train_data, ntree = 500)
 
 ```
 
-
-```{r}
-# SVM Confusion Matrix
-svm_conf_matrix <- table(Predicted = svm_pred, Actual = downsampled_data$label)
-print("SVM Confusion Matrix:")
-print(svm_conf_matrix)
-
-# Random Forest Confusion Matrix
-rf_pred_class <- ifelse(rf_pred > 0.5, "OSN", "Other")
-rf_conf_matrix <- table(Predicted = rf_pred_class, Actual = downsampled_data$label)
-print("Random Forest Confusion Matrix:")
-print(rf_conf_matrix)
-
-```
-
-```{r}
-# SVM ROC Curve and AUC
-svm_roc <- roc(downsampled_data$label, svm_prob)
-plot(svm_roc, main = "SVM ROC Curve")
-svm_auc <- auc(svm_roc)
-print(paste("SVM AUC:", svm_auc))
-
-# Random Forest ROC Curve and AUC
-rf_roc <- roc(downsampled_data$label, rf_pred)
-plot(rf_roc, main = "Random Forest ROC Curve")
-rf_auc <- auc(rf_roc)
-print(paste("Random Forest AUC:", rf_auc))
-
-```
-```{r}
-
-# Cross-validation using 5-folds
-set.seed(123)
-svm_cv <- train(label ~ ., data = downsampled_data, method = "svmRadial", trControl = trainControl(method = "cv", number = 5), tuneLength = 5)
-print(svm_cv)
-
-rf_cv <- train(label ~ ., data = downsampled_data, method = "rf", trControl = trainControl(method = "cv", number = 5), tuneLength = 5)
-print(rf_cv)
-
-```
-
-# Bagging w/ Bagged Trees
+## Bagging w/ Bagged Trees
 
 ```{r}
 
 bagged_trees <- train(
   label ~ .,
-  data = downsampled_data,
+  data = downsampled_train_data,
   method = "treebag",
   trControl = trainControl(method = "cv", number = 5),
   tuneLength = 5
@@ -171,7 +183,7 @@ print(bagged_trees)
 
 ```
 
-# GBM w/ Hyperparam Tuning and xgboost (using parallel processing)
+## GBM w/ Hyperparam Tuning and xgboost (using parallel processing)
 
 ```{r}
 
@@ -198,7 +210,7 @@ train_control <- trainControl(
 
 xgb_model_tuned <- train(
   label ~ .,
-  data = downsampled_data,
+  data = downsampled_train_data,
   method = "xgbTree",
   trControl = train_control,
   tuneGrid = tune_grid_xgb,
@@ -214,3 +226,62 @@ plot(xgb_model_tuned)
 
 
 ```
+
+# Model Evaluation
+Predictions and Confusion Matrix
+We use the trained models to make predictions on the test set and evaluate their performance using confusion matrices.
+
+```{r}
+# Ensure column names in the test set match the training data
+colnames(test_data) <- colnames(downsampled_train_data)[1:(ncol(downsampled_train_data) - 1)]  # Exclude the label column
+
+# Check if the label column is present and correctly populated
+if ("label" %in% colnames(combined_data) && length(combined_data[-train_index, "label"]) == nrow(test_data)) {
+    # Assign the label to test_data
+    test_data$label <- combined_data[-train_index, "label"]
+} else {
+    stop("The label vector is empty or has a different length than expected. Check the data preparation steps.")
+}
+
+# Ensure the label is a factor with the correct levels
+test_data$label <- factor(test_data$label, levels = c("OSN", "Other"))
+
+# SVM Predictions on the test set
+svm_test_pred <- predict(svm_model, newdata = test_data[, -ncol(test_data)], probability = TRUE)
+svm_test_prob <- attr(svm_test_pred, "probabilities")[, "OSN"]
+
+# Random Forest Predictions on the test set
+rf_test_pred <- predict(rf_model, newdata = test_data[, -ncol(test_data)], type = "prob")[, "OSN"]
+
+# SVM Confusion Matrix on the test set
+svm_test_conf_matrix <- table(Predicted = ifelse(svm_test_prob > 0.5, "OSN", "Other"), Actual = test_data$label)
+print("SVM Test Confusion Matrix:")
+print(svm_test_conf_matrix)
+
+# Random Forest Confusion Matrix on the test set
+rf_test_conf_matrix <- table(Predicted = ifelse(rf_test_pred > 0.5, "OSN", "Other"), Actual = test_data$label)
+print("Random Forest Test Confusion Matrix:")
+print(rf_test_conf_matrix)
+
+```
+
+## ROC Curve and AUC
+To further assess model performance, we plot the ROC curves and calculate the AUC for both the SVM and Random Forest models.
+
+```{r}
+# Evaluate the models on the test set (AUC and ROC)
+svm_test_roc <- roc(test_data$label, svm_test_prob)
+plot(svm_test_roc, main = "SVM ROC Curve")
+print(paste("Final SVM Test AUC:", auc(svm_test_roc)))
+
+rf_test_roc <- roc(test_data$label, rf_test_pred)
+plot(rf_test_roc, main = "Random Forest ROC Curve")
+print(paste("Final Random Forest Test AUC:", auc(rf_test_roc)))
+
+```
+
+# Future Directions:
+
+Model Improvement: Further hyperparameter tuning and exploration of other machine learning algorithms could improve prediction accuracy.
+Data Expansion: Incorporating additional omics layers or more complex features could enhance the model's ability to generalize to novel datasets.
+ANKIT possibly you could further expand here with your hyperparamter tuning ?
