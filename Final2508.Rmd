@@ -127,65 +127,79 @@ plot(pca.h3k4me3$x[,1], pca.h3k4me3$x[,2], col=grp.col[grp], pch=19, cex=2,
 # Add sample labels to the plot
 calibrate::textxy(pca.h3k4me3$x[,1], pca.h3k4me3$x[,2], labs=grp, cex=0.5)
 
-#H3K27ac
-# PCA analysis for H3K27ac data
-cor.h3k27ac <- cor(H3K27ac)
-pca.h3k27ac <- prcomp(cor.h3k27ac)
-
-# Generate PCA plot for H3K27ac
-plot(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], col=grp.col[grp], pch=19, cex=2, 
-     xlab=paste0("PC1 (", round(summary(pca.h3k27ac)$importance[2,1]*100,1), "% variance)"),
-     ylab=paste0("PC2 (", round(summary(pca.h3k27ac)$importance[2,2]*100,1), "% variance)"))
-
-calibrate::textxy(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], labs=grp, cex=0.5)
-
 #H3K27me3
 # PCA analysis for H3K27me3 data
 cor.h3k27me3 <- cor(H3K27me3)
 pca.h3k27me3 <- prcomp(cor.h3k27me3)
 
-# Generate PCA plot for H3K27me3
-plot(pca.h3k27me3$x[,1], pca.h3k27me3$x[,2], col=grp.col[grp], pch=19, cex=2, 
-     xlab=paste0("PC1 (", round(summary(pca.h3k27me3)$importance[2,1]*100,1), "% variance)"),
-     ylab=paste0("PC2 (", round(summary(pca.h3k27me3)$importance[2,2]*100,1), "% variance)"))
+# Update group labels and colors for H3K27ac
+grp.h3k27ac <- rownames(pca.h3k27ac$x)
+grp.col.h3k27ac <- rainbow(nrow(pca.h3k27ac$x))
+names(grp.col.h3k27ac) <- rownames(pca.h3k27ac$x)
 
-calibrate::textxy(pca.h3k27me3$x[,1], pca.h3k27me3$x[,2], labs=grp, cex=0.5)
+# Generate PCA plot for H3K27ac
+plot(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], col=grp.col.h3k27ac[grp.h3k27ac], pch=19, cex=2, 
+     xlab=paste0("PC1 (", round(summary(pca.h3k27ac)$importance[2,1]*100,1), "% variance)"),
+     ylab=paste0("PC2 (", round(summary(pca.h3k27ac)$importance[2,2]*100,1), "% variance)"))
+
+# Correctly label the samples for H3K27ac
+calibrate::textxy(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], labs=grp.h3k27ac, cex=0.5)
 
 #H3K4me1
 # PCA analysis for H3K4me1 data
 cor.h3k4me1 <- cor(H3K4me1)
 pca.h3k4me1 <- prcomp(cor.h3k4me1)
 
+# Define the group labels and colors specifically for H3K4me1 data
+grp.h3k4me1 <- rownames(pca.h3k4me1$x)
+grp.col.h3k4me1 <- rainbow(nrow(pca.h3k4me1$x))
+names(grp.col.h3k4me1) <- rownames(pca.h3k4me1$x)
+
 # Generate PCA plot for H3K4me1
-plot(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], col=grp.col[grp], pch=19, cex=2, 
+plot(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], col=grp.col.h3k4me1[grp.h3k4me1], pch=19, cex=2, 
      xlab=paste0("PC1 (", round(summary(pca.h3k4me1)$importance[2,1]*100,1), "% variance)"),
      ylab=paste0("PC2 (", round(summary(pca.h3k4me1)$importance[2,2]*100,1), "% variance)"))
 
-calibrate::textxy(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], labs=grp, cex=0.5)
+# Correctly label the samples for H3K4me1
+calibrate::textxy(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], labs=grp.h3k4me1, cex=0.5)
 
 #H3K9me2
 # PCA analysis for H3K9me2 data
 cor.h3k9me2 <- cor(H3K9me2)
 pca.h3k9me2 <- prcomp(cor.h3k9me2)
 
+# Define the group labels and colors specifically for H3K9me2 data
+grp.h3k9me2 <- rownames(pca.h3k9me2$x)
+grp.col.h3k9me2 <- rainbow(nrow(pca.h3k9me2$x))
+names(grp.col.h3k9me2) <- rownames(pca.h3k9me2$x)
+
 # Generate PCA plot for H3K9me2
-plot(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], col=grp.col[grp], pch=19, cex=2, 
+plot(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], col=grp.col.h3k9me2[grp.h3k9me2], pch=19, cex=2, 
      xlab=paste0("PC1 (", round(summary(pca.h3k9me2)$importance[2,1]*100,1), "% variance)"),
      ylab=paste0("PC2 (", round(summary(pca.h3k9me2)$importance[2,2]*100,1), "% variance)"))
 
-calibrate::textxy(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], labs=grp, cex=0.5)
+# Correctly label the samples for H3K9me2
+calibrate::textxy(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], labs=grp.h3k9me2, cex=0.5)
+
 
 #PolII
 # PCA analysis for PolII data
 cor.polii <- cor(PolII)
 pca.polii <- prcomp(cor.polii)
 
+# Define the group labels and colors specifically for PolII data
+grp.polii <- rownames(pca.polii$x)
+grp.col.polii <- rainbow(nrow(pca.polii$x))
+names(grp.col.polii) <- rownames(pca.polii$x)
+
 # Generate PCA plot for PolII
-plot(pca.polii$x[,1], pca.polii$x[,2], col=grp.col[grp], pch=19, cex=2, 
+plot(pca.polii$x[,1], pca.polii$x[,2], col=grp.col.polii[grp.polii], pch=19, cex=2, 
      xlab=paste0("PC1 (", round(summary(pca.polii)$importance[2,1]*100,1), "% variance)"),
      ylab=paste0("PC2 (", round(summary(pca.polii)$importance[2,2]*100,1), "% variance)"))
 
-calibrate::textxy(pca.polii$x[,1], pca.polii$x[,2], labs=grp, cex=0.5)
+# Correctly label the samples for PolII
+calibrate::textxy(pca.polii$x[,1], pca.polii$x[,2], labs=grp.polii, cex=0.5)
+
 
 
 ## Filter and Combine Datasets
