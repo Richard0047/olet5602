@@ -1,0 +1,334 @@
+---
+title: "OLET5602 Final Project: Transcription Factor Target Gene Prediction"
+author: "Declan Langreiter"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load necessary packages and data
+load("Final_Project_ESC.RData", verbose = TRUE)
+
+suppressPackageStartupMessages({
+    library(e1071)
+    library(ggplot2)
+    library(ROCR)
+    library(dplyr)
+    library(tibble)
+    library(reshape2)
+    library(caret)
+    library(randomForest)
+    library(pROC)
+})
+
+# Ensure all data has the same set of genes
+genes <- intersect(rownames(Transcriptome), rownames(Proteome))
+genes <- intersect(genes, rownames(H3K4me3))
+genes <- intersect(genes, rownames(H3K27me3))
+genes <- intersect(genes, rownames(H3K27ac))
+genes <- intersect(genes, rownames(H3K4me1))
+genes <- intersect(genes, rownames(H3K9me2))
+genes <- intersect(genes, rownames(PolII))
+
+# Filter each dataset for the common genes
+Transcriptome_filter <- Transcriptome[genes, ]
+Proteome_filter <- Proteome[genes, ]
+H3K4me3_filter <- H3K4me3[genes, ]
+H3K27me3_filter <- H3K27me3[genes, ]
+H3K27ac_filter <- H3K27ac[genes, ]
+H3K4me1_filter <- H3K4me1[genes, ]
+H3K9me2_filter <- H3K9me2[genes, ]
+PolII_filter <- PolII[genes, ]
+
+# Rename columns to avoid conflicts
+colnames(Transcriptome_filter) <- paste("T_", colnames(Transcriptome_filter), sep = "")
+colnames(Proteome_filter) <- paste("P_", colnames(Proteome_filter), sep = "")
+colnames(H3K4me3_filter) <- paste("H3K4me3_", colnames(H3K4me3_filter), sep = "")
+colnames(H3K27me3_filter) <- paste("H3K27me3_", colnames(H3K27me3_filter), sep = "")
+colnames(H3K27ac_filter) <- paste("H3K27ac_", colnames(H3K27ac_filter), sep = "")
+colnames(H3K4me1_filter) <- paste("H3K4me1_", colnames(H3K4me1_filter), sep = "")
+colnames(H3K9me2_filter) <- paste("H3K9me2_", colnames(H3K9me2_filter), sep = "")
+colnames(PolII_filter) <- paste("PolII_", colnames(PolII_filter), sep = "")
+
+# Combine the datasets
+combined_data <- cbind(
+  Transcriptome_filter,
+  Proteome_filter,
+  H3K4me3_filter,
+  H3K27me3_filter,
+  H3K27ac_filter,
+  H3K4me1_filter,
+  H3K9me2_filter,
+  PolII_filter
+)
+
+# Add the labels
+label <- ifelse(genes %in% OSN_target_genes_subset, "OSN", "Other")
+combined_data <- data.frame(combined_data)
+combined_data$label <- factor(label)
+
+# Check the initial label distribution
+print(table(combined_data$label))
+
+# Split the dataset into training (90%) and testing (10%) sets
+set.seed(123)
+train_index <- createDataPartition(combined_data$label, p = 0.9, list = FALSE)
+
+train_data <- combined_data[train_index, ]
+test_data <- combined_data[-train_index, ]
+
+# Reassign the label column to test_data
+test_data$label <- combined_data[-train_index, "label"]
+
+# Check the distribution of labels in the training and test sets
+print("Training set label distribution:")
+print(table(train_data$label))
+
+print("Test set label distribution:")
+print(table(test_data$label))
+
+# Balance the training data using downsampling
+set.seed(123)
+downsampled_train_data <- downSample(x = train_data[, -ncol(train_data)], 
+                                     y = train_data$label, 
+                                     yname = "label")
+
+# Check the balanced label distribution
+print("Balanced training set label distribution:")
+print(table(downsampled_train_data$label))
+
+# Final check of training dataset dimensions
+print(dim(downsampled_train_data))
+
+```
+
+```{r}
+# Train an SVM model on the downsampled training data
+set.seed(123)
+svm_model <- svm(label ~ ., data = downsampled_train_data, kernel = "radial", probability = TRUE)
+
+# Train a Random Forest model on the downsampled training data
+set.seed(123)
+rf_model <- randomForest(label ~ ., data = downsampled_train_data, ntree = 500)
+
+```
+
+
+```{r}
+# Ensure column names in the test set match the training data
+colnames(test_data) <- colnames(downsampled_train_data)[1:(ncol(downsampled_train_data) - 1)]  # Exclude the label column
+
+# Ensure the label is a factor with the correct levels
+test_data$label <- factor(test_data$label, levels = c("OSN", "Other"))
+
+# SVM Predictions on the test set
+svm_test_pred <- predict(svm_model, newdata = test_data[, -ncol(test_data)], probability = TRUE)
+svm_test_prob <- attr(svm_test_pred, "probabilities")[, "OSN"]
+
+# Random Forest Predictions on the test set
+rf_test_pred <- predict(rf_model, newdata = test_data[, -ncol(test_data)], type = "prob")[, "OSN"]
+
+```
+
+```{r}
+# Check the label column before assignment
+print(length(combined_data[-train_index, "label"]))  # Should match the number of rows in test_data
+print(head(combined_data[-train_index, "label"]))
+```
+
+```{r}
+# Reassign the label column to test_data
+test_data$label <- combined_data[-train_index, "label"]
+
+# Ensure the label is a factor with the correct levels
+test_data$label <- factor(test_data$label, levels = c("OSN", "Other"))
+
+# Confirm the assignment
+print(length(test_data$label))  # Should be 817
+print(head(test_data$label))
+
+```
+
+```{r}
+# Ensure the label column is correctly assigned in the test_data
+test_data$label <- combined_data[-train_index, "label"]
+
+# Check that the assignment is correct
+print(length(test_data$label))  # Should match the number of rows in test_data
+print(head(test_data$label))
+
+# Ensure the label is a factor with the correct levels
+test_data$label <- factor(test_data$label, levels = c("OSN", "Other"))
+
+# Ensure column names in the test set match the training data (excluding the label column)
+colnames(test_data) <- c(colnames(downsampled_train_data)[1:(ncol(downsampled_train_data) - 1)], "label")
+
+# SVM Predictions on the test set
+svm_test_pred <- predict(svm_model, newdata = test_data[, -ncol(test_data)], probability = TRUE)
+svm_test_prob <- attr(svm_test_pred, "probabilities")[, "OSN"]
+
+# Random Forest Predictions on the test set
+rf_test_pred <- predict(rf_model, newdata = test_data[, -ncol(test_data)], type = "prob")[, "OSN"]
+
+```
+
+```{r}
+# Ensure column names in the test set match the training data (excluding the label column)
+colnames(test_data) <- c(colnames(downsampled_train_data)[1:(ncol(downsampled_train_data) - 1)], "label")
+
+# SVM Predictions on the test set
+svm_test_pred <- predict(svm_model, newdata = test_data[, -ncol(test_data)], probability = TRUE)
+svm_test_prob <- attr(svm_test_pred, "probabilities")[, "OSN"]
+
+# Random Forest Predictions on the test set
+rf_test_pred <- predict(rf_model, newdata = test_data[, -ncol(test_data)], type = "prob")[, "OSN"]
+
+# SVM Confusion Matrix on the test set
+svm_test_conf_matrix <- table(Predicted = ifelse(svm_test_prob > 0.5, "OSN", "Other"), Actual = test_data$label)
+print("SVM Test Confusion Matrix:")
+print(svm_test_conf_matrix)
+
+# Random Forest Confusion Matrix on the test set
+rf_test_conf_matrix <- table(Predicted = ifelse(rf_test_pred > 0.5, "OSN", "Other"), Actual = test_data$label)
+print("Random Forest Test Confusion Matrix:")
+print(rf_test_conf_matrix)
+
+```
+
+```{r}
+# Check the number of rows for the labels you are trying to assign
+labels <- combined_data[-train_index, "label"]
+print(length(labels))  # Should match the number of rows in test_data (817)
+
+```
+
+```{r}
+# Check if the label vector is empty
+if (length(labels) == 0) {
+    stop("The labels vector is empty. Check the indexing or data assignment earlier in the script.")
+} else {
+    test_data$label <- labels
+}
+
+```
+
+```{r}
+# Reassign the label column to test_data
+test_data$label <- combined_data[-train_index, "label"]
+
+# Ensure the label is correctly assigned and matches the length of test_data
+print(length(test_data$label))  # Should print 817
+print(head(test_data$label))    # Preview the first few labels
+
+```
+
+```{r}
+# Check if the label vector is empty before assignment
+labels <- combined_data[-train_index, "label"]
+if (length(labels) == 0) {
+    stop("The labels vector is empty. Check the indexing or data assignment earlier in the script.")
+} else {
+    # Reassign the label column to test_data
+    test_data$label <- labels
+
+    # Ensure the label is a factor with the correct levels
+    test_data$label <- factor(test_data$label, levels = c("OSN", "Other"))
+
+    # Confirm the assignment
+    print(length(test_data$label))  # Should be 817
+    print(head(test_data$label))
+}
+
+# Continue with predictions and evaluations
+colnames(test_data) <- c(colnames(downsampled_train_data)[1:(ncol(downsampled_train_data) - 1)], "label")
+
+# SVM Predictions on the test set
+svm_test_pred <- predict(svm_model, newdata = test_data[, -ncol(test_data)], probability = TRUE)
+svm_test_prob <- attr(svm_test_pred, "probabilities")[, "OSN"]
+
+# Random Forest Predictions on the test set
+rf_test_pred <- predict(rf_model, newdata = test_data[, -ncol(test_data)], type = "prob")[, "OSN"]
+
+```
+
+```{r}
+# Evaluate the models on the test set (AUC and ROC)
+svm_test_roc <- roc(test_data$label, svm_test_prob)
+plot(svm_test_roc, main = "SVM ROC Curve")
+print(paste("Final SVM Test AUC:", auc(svm_test_roc)))
+
+rf_test_roc <- roc(test_data$label, rf_test_pred)
+plot(rf_test_roc, main = "Random Forest ROC Curve")
+print(paste("Final Random Forest Test AUC:", auc(rf_test_roc)))
+
+```
+```{r}
+
+# Cross-validation using 5-folds
+set.seed(123)
+svm_cv <- train(label ~ ., data = downsampled_data, method = "svmRadial", trControl = trainControl(method = "cv", number = 5), tuneLength = 5)
+print(svm_cv)
+
+rf_cv <- train(label ~ ., data = downsampled_data, method = "rf", trControl = trainControl(method = "cv", number = 5), tuneLength = 5)
+print(rf_cv)
+
+```
+
+# Bagging w/ Bagged Trees
+
+```{r}
+
+bagged_trees <- train(
+  label ~ .,
+  data = downsampled_data,
+  method = "treebag",
+  trControl = trainControl(method = "cv", number = 5),
+  tuneLength = 5
+)
+print(bagged_trees)
+
+```
+
+# GBM w/ Hyperparam Tuning and xgboost
+
+```{r}
+
+tune_grid_xgb <- expand.grid(
+  nrounds = c(100, 200, 300),
+  max_depth = c(3, 6, 9),
+  eta = c(0.01, 0.1, 0.3),
+  gamma = c(0, 0.1, 0.2),
+  colsample_bytree = c(0.5, 0.75, 1),
+  min_child_weight = c(1, 5, 10),
+  subsample = c(0.5, 0.75, 1)
+)
+
+
+train_control <- trainControl(
+  method = "cv",
+  number = 5,
+  savePredictions = "final",
+  verboseIter = TRUE
+)
+
+xgb_model_tuned <- train(
+  label ~ .,
+  data = downsampled_data,
+  method = "xgbTree",
+  trControl = train_control,
+  tuneGrid = tune_grid_xgb,
+  metric = "Accuracy"  # Performance Metric
+)
+print(xgb_model_tuned)
+
+# Printing the best model's details
+print(xgb_model_tuned$bestTune)
+
+# Plotting model performance
+plot(xgb_model_tuned)
+
+
+```

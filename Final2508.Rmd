@@ -13,12 +13,12 @@ load("Final_Project_ESC.RData", verbose = TRUE)
 
 suppressPackageStartupMessages({
     library(e1071)
-    #library(PhosR)
     library(ggplot2)
     library(ROCR)
     library(dplyr)
     library(tibble)
     library(reshape2)
+    library(kernlab)
     library(caret)
     library(randomForest)
     library(adabag)
