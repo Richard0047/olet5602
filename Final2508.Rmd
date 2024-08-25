@@ -12,9 +12,9 @@ output:
 The aim of this project is to apply classification techniques to predict novel transcription factor target genes, focusing on Sox2 and Nanog during embryonic stem cell (ESC) differentiation.
 
 **Background:**  
-Transcriptional regulation is a fundamental process in all living organisms, driven by transcription factors that control mRNA expression. These transcriptional networks are crucial in development, lineage specification, and cell fate decisions during early embryonic development (Theunissen and Jaenisch, 2017). Recent advances in omics technologies allow for the profiling of genome-wide transcriptional and epigenetic events, providing a deeper understanding of these networks.
+Transcriptional regulation is a fundamental process in all living organisms, driven by transcription factors that control mRNA expression. These transcriptional networks are crucial in development, lineage specification, and cell fate decisions during early embryonic development ([Theunissen and Jaenisch, 2017](https://doi.org/10.1038/nrm.2017.15)). Recent advances in omics technologies allow for the profiling of genome-wide transcriptional and epigenetic events, providing a deeper understanding of these networks.
 
-In this project, we utilize high-temporal-resolution multi-omics data of ESC differentiation (Yang et al., 2019) to predict novel substrates of Sox2 and Nanog—two key transcription factors involved in maintaining pluripotency and guiding cell differentiation.
+In this project, we utilize high-temporal-resolution multi-omics data of ESC differentiation ([Yang et al., 2019](https://doi.org/10.1016/j.cell.2019.02.035)) to predict novel substrates of Sox2 and Nanog—two key transcription factors involved in maintaining pluripotency and guiding cell differentiation.
 
 **Dataset Overview:**
 - **Transcriptome:** Time-course mRNA profiles during ESC differentiation.
@@ -57,7 +57,7 @@ suppressPackageStartupMessages({
 ```
 
 ## Filter and Combine Datasets
-To ensure consistency across datasets, we filter each dataset to include only the common genes present in all omics layers. We then combine these filtered datasets into a single data frame for further analysis
+To ensure consistency across datasets, we filter each dataset to include only the common genes present in all omics layers. We then combine these filtered datasets into a single data frame for further analysis.
 
 ```{r}
 # Ensure all data has the same set of genes
@@ -68,7 +68,9 @@ genes <- intersect(genes, rownames(H3K27ac))
 genes <- intersect(genes, rownames(H3K4me1))
 genes <- intersect(genes, rownames(H3K9me2))
 genes <- intersect(genes, rownames(PolII))
+```
 
+```{r}
 # Filter each dataset for the common genes
 Transcriptome_filter <- Transcriptome[genes, ]
 Proteome_filter <- Proteome[genes, ]
@@ -78,7 +80,9 @@ H3K27ac_filter <- H3K27ac[genes, ]
 H3K4me1_filter <- H3K4me1[genes, ]
 H3K9me2_filter <- H3K9me2[genes, ]
 PolII_filter <- PolII[genes, ]
+```
 
+```{r}
 # Rename columns to avoid conflicts
 colnames(Transcriptome_filter) <- paste("T_", colnames(Transcriptome_filter), sep = "")
 colnames(Proteome_filter) <- paste("P_", colnames(Proteome_filter), sep = "")
@@ -105,13 +109,15 @@ combined_data <- cbind(
 label <- ifelse(genes %in% OSN_target_genes_subset, "OSN", "Other")
 combined_data <- data.frame(combined_data)
 combined_data$label <- factor(label)
+```
 
+```{r}
 # Check the initial label distribution
 print(table(combined_data$label))
 ```
 
 ## Data Splitting and Balancing
-Train-Test Split
+
 The dataset is split into training (90%) and testing (10%) sets. The label column is reassigned to the test set to ensure that it is included correctly.
 
 ```{r}
@@ -147,7 +153,9 @@ downsampled_train_data <- downSample(x = train_data[, -ncol(train_data)],
 # Check the balanced label distribution
 print("Balanced training set label distribution:")
 print(table(downsampled_train_data$label))
+```
 
+```{r}
 # Final check of training dataset dimensions
 print(dim(downsampled_train_data))
 
@@ -282,6 +290,11 @@ print(paste("Final Random Forest Test AUC:", auc(rf_test_roc)))
 
 # Future Directions:
 
-Model Improvement: Further hyperparameter tuning and exploration of other machine learning algorithms could improve prediction accuracy.
-Data Expansion: Incorporating additional omics layers or more complex features could enhance the model's ability to generalize to novel datasets.
-ANKIT possibly you could further expand here with your hyperparamter tuning ?
+**Model Improvement:**  
+Further hyperparameter tuning using automated methods like grid search or random search could refine the model's accuracy. Additionally, exploring ensemble methods that combine predictions from several models might yield better results.
+
+**Data Expansion:**  
+Incorporating additional omics layers, such as metabolomics or additional transcription factor binding profiles, could help to improve the model's predictive power and generalisability.
+
+**Integration with Clinical Data:**  
+Linking omics profiles with clinical outcomes could also be explored to improve the translational impact of the research.
