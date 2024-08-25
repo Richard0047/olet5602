@@ -1,0 +1,255 @@
+---
+title: "OLET5602 Project Example"
+author: "Hani Kim and Taiyun Kim"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Transcription factor target gene prediction through multi-omics datasets 
+
+Aim: Prediction is a central application in many real-world data analyses. In this project, we will aim to apply classification techniques for predicting novel transcription factor target genes.
+
+Background: Transcriptional regulation is a vital process in all living organisms. It is orchestrated by transcription factors along with other factors that in concert drive mRNA expression. Distinct transcriptional networks drive development, lineage specification, and cell fate decisions during early embryonic development (Theunissen and Jaenisch, 2017). Recent advances in omics technologies have made it possible to profile genome-wide transcriptional and epigenetic events for investigating transcriptional networks. A key goal is to identify the target genes of transcription factors that drive key transcriptional events over a course of time. 
+
+This project template has been developed to help you kick start your project and is by no means an exhaustive template or a definitive guide. Students may present their project in any format that they deem appropriate to fulfil the assessment requirements.  
+
+# Load the data and the packages you will use
+
+```{r}
+load("old/Final_Project_ESC.RData", verbose=T)
+
+suppressPackageStartupMessages({
+    library(e1071)
+    library(PhosR) 
+    library(ggplot2)
+    library(ROCR)
+    library(dplyr)
+    library(tibble)
+})
+```
+
+# Exploratory analysis of the omics data
+
+Our task is to predict transcription factor target genes from temporally resolved multi-omic datasets that profile embryonic stem cell differentiation. Before embarking on this task, it is important to understand your datasets. A common method to investigate the structure of data is PCA analysis. Let us run PCA analysis on the transcriptome data as an example. 
+
+## Transcriptome
+
+Our transcriptome data contains the temporal expression of 19788 genes across 8 timepoints.
+```{r}
+head(Transcriptome)
+dim(Transcriptome)
+colnames(Transcriptome)
+```
+
+We will use `prcomp` function to plot the PCA. The PCA analysis shows that there is a clear trajectory of the samples from 0h going to 72hr, meaning that the transcriptomes of the cells are dynamically changing across time. 
+
+
+```{r fig.height=5, fig.width=5}
+cor.mat <- cor(Transcriptome)
+pca.mat <- prcomp(cor.mat)
+grp <- rownames(pca.mat$x)
+grp.col <- rainbow(nrow(pca.mat$x))
+names(grp.col) <- rownames(pca.mat$x)
+plot(pca.mat$x[,1], pca.mat$x[,2], col=grp.col[grp], pch=19, cex=2, 
+     xlab=paste0("PC1_(", round(summary(pca.mat)$importance[2,1]*100,1), "% variance)"),
+     ylab=paste0("PC2_(", round(summary(pca.mat)$importance[2,2]*100,1), "% variance)"))
+calibrate::textxy(pca.mat$x[,1], pca.mat$x[,2], labs=grp, cex=0.5)
+```
+
+Include further any other relevant exploratory analysis your group think is necessary. 
+
+## Classification
+
+In real-world data analysis, it is very challenging to accurately identify transcription factor target genes. This may be for various reasons: transcription factor targets may change in dynamic systems such as a differentiation model, transcription factor ChIP-seq data may contain many false positive signal and so on. For this project, you have been given a set of known target genes of three transcription factors, Sox2 and Nanog (the target genes of these two transcription factors have been combined for simplicity), involved in the differentiation of embryonic stem cells. These target genes were identified in our recent study (Kim et al., 2020) where we integrated time-resolved trans-omics datasets (TF ChIP-seq, transcriptome, epigenome, proteome, and 3D chromatin conformation data) to identify target genes of a panel of transcription factors including Sox2 and Nanog. Your task is to use the subset of transcription factor target genes to identify other potential target genes of these transcription factors using classification algorithms.
+
+
+Here, we will perform a simple demonstration by combining proteomics and transcriptomics dataset to identify Sox2 and Nanog target genes.
+
+
+```{r}
+# We find the intersecting genes in transcriptome and proteome
+genes = intersect(rownames(Transcriptome), rownames(Proteome))
+Transcriptome_filter = Transcriptome[which(rownames(Transcriptome) %in% genes),]
+Proteome_filter = Proteome[which(rownames(Proteome) %in% genes),]
+
+# We make sure that the genes are in the correct order before we join.
+Transcriptome_filter = Transcriptome_filter[order(rownames(Transcriptome_filter)),]
+Proteome_filter = Proteome_filter[order(rownames(Proteome_filter)),]
+# expect TRUE
+identical(rownames(Transcriptome_filter), rownames(Proteome_filter))
+
+# To avoid duplicated names (timepoints) from different omics, we will rename them.
+colnames(Transcriptome_filter) = paste("T_", colnames(Transcriptome_filter), sep = "")
+colnames(Proteome_filter) = paste("P_", colnames(Proteome_filter), sep = "")
+
+# Combine. Both proteome and transcriptome have already been transformed to comparable scales.
+dat = cbind(
+  Transcriptome_filter,
+  Proteome_filter
+)
+
+dim(dat)
+head(dat)
+
+# Number of genes which we are given to be targets for Sox2 and Nanog
+length(OSN_target_genes_subset)
+# Number of genes in the data that are not identified.
+nrow(dat) - length(OSN_target_genes_subset)
+```
+
+*Note that the proteome and transcriptome are transformed to be in the comparable scale and thus it is okay to join them. However, the epigenome data provided are in different scale for each histone marks. Thus, they cannot be joined with transcriptome or proteome as shown above, and you will need to work on each of histone marks separately in the epigenome data.*
+
+We have roughly 100 genes known to be targets for Sox2 and Nanog and approximately 8000 genes which are unknown. We will consider all those genes that are not in `OSN_target_genes_subset` as `Other`. 
+
+```{r}
+genes = genes[order(genes)]
+dat = dat[order(rownames(dat)),]
+
+label = ifelse(genes %in% OSN_target_genes_subset, "OSN", "Other")
+
+table(label)
+
+dat = data.frame(dat)
+
+dat$label = factor(label)
+```
+
+This is a huge imabalance and thus we will downsample some of those `Other` classes. In this demonstration, we will perform the most naive approach by subsampling random 100 from the `Other` labels to train the model. Please note that this is not the ideal approach as it will not give the most optimal results. (Hint: One approach is to try to do an ensemble and exploratory analysis to find set of genes that are least likely to be Sox2/Nanog targets through visualisations, clustering, etc.)
+
+
+```{r}
+# Sampling random 100 Other
+set.seed(123)
+selection = sample(which(label == "Other"), 100)
+selection = c(which(label == "OSN"), selection)
+dat_train = dat[selection,]
+```
+
+
+### Training the model
+
+To train our model, we will use Support Vector Machine (SVM) with radial kernel from `e1071` package.
+
+```{r}
+# Here, you can do various cross-validation and/or feature selection to optimse your model
+set.seed(123)
+model2 = svm(formula = label ~ ., data = dat_train, kernel = "radial", probability = TRUE)
+
+pred = predict(model2, newdata = dat[,-which(grepl("label", colnames(dat)))], probability = TRUE, decision.values = TRUE)
+prob <- attr(pred, "probabilities")[,2]
+
+```
+
+### Evaluation
+
+We will use the full OSN target gene list from our publication (Kim et al., 2020) to evaluate our model.
+
+#### Confusion matrix
+
+```{r}
+true_label = factor(ifelse(rownames(dat) %in% OSN_target_genes, "OSN", "Other"))
+
+table(pred, true_label)
+
+# What is the sensitivity and specificity?
+```
+
+#### ROC curve
+
+```{r}
+roc.pred <- prediction(prob, true_label)
+
+perf <- performance(roc.pred, "tpr", "fpr")
+
+
+plt_dat = data.frame(
+    FPR = perf@x.values[[1]],
+    TPR = perf@y.values[[1]]
+)
+
+ggplot(plt_dat, aes(x = FPR, y = TPR)) +
+    geom_line(colour = "blue") +
+    labs(x = perf@x.name, y = perf@y.name) +
+    geom_abline(slope = 1, intercept = 0)
+
+```
+
+
+```{r}
+# identify the genes which has a probability > 0.7 for OSN 
+OSN_gene_prob = attr(pred, "probabilities")[,"OSN"]
+
+OSN_gene_candidate1 = OSN_gene_prob[OSN_gene_prob > 0.7]
+OSN_gene_candidate2 = OSN_gene_prob[OSN_gene_prob > 0.6]
+
+
+# Number of genes with probability of OSN > 0.7 or 0.5
+length(names(OSN_gene_candidate1))
+length(names(OSN_gene_candidate2))
+
+# Number of OSN target genes we predicted which are in the list
+length(which(names(OSN_gene_candidate1) %in% OSN_target_genes))
+length(which(names(OSN_gene_candidate2) %in% OSN_target_genes))
+
+```
+
+
+#### Expression profiles of Transcriptome and Proteome
+
+```{r}
+OSN_dat = dat[which(rownames(dat) %in% OSN_target_genes),]
+OSN_dat$label = NULL
+OSN_dat = OSN_dat %>%
+  add_column(genes = rownames(.), .before = 1)
+OSN_dat_long = reshape2::melt(OSN_dat)
+
+ggplot(OSN_dat_long, aes(x = variable, y = value)) +
+  geom_boxplot() +
+  #coord_cartesian(ylim = c(-3, 3)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), aspect.ratio = 1) +
+  ggtitle("Expression profiles in true Sox2/Nanog target genes")
+
+
+
+OSN_dat_candidate = dat[which(rownames(dat) %in% names(OSN_gene_candidate1)),]
+OSN_dat_candidate$label = NULL
+OSN_dat_candidate = OSN_dat_candidate %>%
+  add_column(genes = rownames(.), .before = 1)
+OSN_dat_candidate_long = reshape2::melt(OSN_dat_candidate)
+
+ggplot(OSN_dat_candidate_long, aes(x = variable, y = value)) +
+  geom_boxplot() +
+  #coord_cartesian(ylim = c(-2, 2)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), aspect.ratio = 1) +
+  ggtitle("Expression profiles of target genes we predicted for Sox2/Nanog (probabilities > 0.7)")
+
+
+OSN_dat_candidate = dat[which(rownames(dat) %in% names(OSN_gene_candidate2)),]
+OSN_dat_candidate$label = NULL
+OSN_dat_candidate = OSN_dat_candidate %>%
+  add_column(genes = rownames(.), .before = 1)
+OSN_dat_candidate_long = reshape2::melt(OSN_dat_candidate)
+
+ggplot(OSN_dat_candidate_long, aes(x = variable, y = value)) +
+  geom_boxplot() +
+  #coord_cartesian(ylim = c(-2, 2)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), aspect.ratio = 1) +
+  ggtitle("Expression profiles of target genes we predicted for Sox2/Nanog (probabilities > 0.5)")
+
+
+
+```
+
+
+Further evaluation metrics and visualisation are expected for evaluation.
+
+# SessionInfo
+
+```{r}
+sessionInfo()
+```
+
+

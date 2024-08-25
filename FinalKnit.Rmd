@@ -1,0 +1,225 @@
+---
+title: "OLE Final Project"
+output:
+  pdf_document: default
+  html_document: default
+date: "2024-08-21"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Project: Transcription factor target gene prediction through multi-omics datasets
+
+Aim: Prediction is a central application in many real-world data analyses. In this project, we will aim to apply classification techniques for predicting novel transcription factor target genes.
+
+Background: Transcriptional regulation is a vital process in all living organisms. It is orchestrated by transcription factors along with other factors that in concert drive mRNA expression. Distinct transcriptional networks drive development, lineage specification, and cell fate decisions during early embryonic development (Theunissen and Jaenisch, 2017). Recent advances in omics technologies have made it possible to profile genome-wide transcriptional and epigenetic events for investigating transcriptional networks. A key goal is to identify the target genes of transcription factors that drive key transcriptional events over a course of time.
+
+
+
+```{r cars}
+# Load necessary libraries
+library(tidyverse)
+library(caret)
+library(randomForest)
+library(e1071)
+library(ggplot2)
+library(reshape2)
+```
+
+## Load the Data
+
+```{r pressure, echo=FALSE}
+load("Final_Project_ESC.RData")
+```
+
+## Check the contents of the loaded data
+
+```{r pressure, echo=FALSE}
+ls()
+```
+
+## Explore each dataset to understand its structure
+
+```{r}
+str(Transcriptome)
+str(Proteome)
+str(OSN_target_genes_subset)
+```
+
+## Check availability of gene and number of time points in each dataset
+
+```{r}
+gene_name <- "CDC45"  # Replace with the gene of interest
+gene_name %in% rownames(Transcriptome)
+gene_name %in% rownames(Proteome)
+gene_name %in% rownames(H3K27ac)
+
+ncol(Transcriptome)
+ncol(Proteome)
+ncol(H3K27ac)
+```
+## Visualise Gene expression levels overtime within 3 datasets (Transciptome, Proteome, H3K27ac) and handle missing values 'NA' by imputing.
+
+```{r}
+library(ggplot2)
+
+# Correct time points
+timepoints <- c(0, 1, 6, 12, 24, 36, 48, 72)
+
+# Ensure that all datasets have the same length
+lengths <- c(length(gene_expression_transcriptome), length(gene_expression_proteome), length(gene_expression_H3K27ac))
+max_length <- max(lengths)
+
+# Fill missing values with NA if needed
+gene_expression_transcriptome <- c(gene_expression_transcriptome, rep(NA, max_length - length(gene_expression_transcriptome)))
+gene_expression_proteome <- c(gene_expression_proteome, rep(NA, max_length - length(gene_expression_proteome)))
+gene_expression_H3K27ac <- c(gene_expression_H3K27ac, rep(NA, max_length - length(gene_expression_H3K27ac)))
+
+# Create a data frame for plotting, using the correct time points
+df <- data.frame(
+  Time = rep(timepoints, 3),
+  Expression = c(gene_expression_transcriptome, gene_expression_proteome, gene_expression_H3K27ac),
+  Type = rep(c("Transcriptome", "Proteome", "H3K27ac"), each = length(timepoints))
+)
+
+# Remove rows with NA values for plotting
+df <- na.omit(df)
+
+# Plot with proper grouping and correct time points
+ggplot(df, aes(x = Time, y = Expression, color = Type, group = Type)) +
+  geom_line() +
+  ggtitle(paste("Expression Profile of", gene_name)) +
+  xlab("Time (hours)") + ylab("Expression Level")
+
+```
+
+
+```{r}
+# Ensure necessary libraries are loaded
+library(dplyr)
+
+# Find common genes across all datasets
+common_genes <- Reduce(intersect, list(rownames(Transcriptome), rownames(Proteome), rownames(H3K27ac), 
+                                       rownames(H3K27me3), rownames(H3K4me1), rownames(H3K4me3), rownames(H3K9me2), rownames(PolII)))
+
+# Subset each dataset to include only the common genes
+Transcriptome_subset <- Transcriptome[common_genes, ]
+Proteome_subset <- Proteome[common_genes, ]
+H3K27ac_subset <- H3K27ac[common_genes, ]
+H3K27me3_subset <- H3K27me3[common_genes, ]
+H3K4me1_subset <- H3K4me1[common_genes, ]
+H3K4me3_subset <- H3K4me3[common_genes, ]
+H3K9me2_subset <- H3K9me2[common_genes, ]
+PolII_subset <- PolII[common_genes, ]
+
+# Combine the datasets by binding them column-wise
+feature_matrix <- cbind(
+  transcriptome = Transcriptome_subset,
+  proteome = Proteome_subset,
+  H3K27ac = H3K27ac_subset,
+  H3K27me3 = H3K27me3_subset,
+  H3K4me1 = H3K4me1_subset,
+  H3K4me3 = H3K4me3_subset,
+  H3K9me2 = H3K9me2_subset,
+  PolII = PolII_subset
+)
+
+# Add gene names as a column
+feature_matrix <- as.data.frame(feature_matrix)
+feature_matrix$gene <- common_genes
+
+# Ensure no missing values
+feature_matrix <- na.omit(feature_matrix)
+
+# View the feature matrix structure
+str(feature_matrix)
+
+
+```
+
+```{r}
+# Function to rename columns with dataset name prefix
+rename_columns <- function(df, prefix) {
+  colnames(df) <- paste(prefix, colnames(df), sep = "_")
+  return(df)
+}
+
+# Rename columns for each dataset
+Transcriptome_subset <- rename_columns(Transcriptome_subset, "Transcriptome")
+Proteome_subset <- rename_columns(Proteome_subset, "Proteome")
+H3K27ac_subset <- rename_columns(H3K27ac_subset, "H3K27ac")
+H3K27me3_subset <- rename_columns(H3K27me3_subset, "H3K27me3")
+H3K4me1_subset <- rename_columns(H3K4me1_subset, "H3K4me1")
+H3K4me3_subset <- rename_columns(H3K4me3_subset, "H3K4me3")
+H3K9me2_subset <- rename_columns(H3K9me2_subset, "H3K9me2")
+PolII_subset <- rename_columns(PolII_subset, "PolII")
+
+# Combine the datasets again with new unique column names
+feature_matrix <- cbind(
+  Transcriptome_subset,
+  Proteome_subset,
+  H3K27ac_subset,
+  H3K27me3_subset,
+  H3K4me1_subset,
+  H3K4me3_subset,
+  H3K9me2_subset,
+  PolII_subset
+)
+
+# Add gene names as a column
+feature_matrix <- as.data.frame(feature_matrix)
+feature_matrix$gene <- common_genes
+
+# Ensure no missing values
+feature_matrix <- na.omit(feature_matrix)
+
+# View the feature matrix structure to confirm no duplicate names
+str(feature_matrix)
+
+```
+
+
+```{r}
+# Load necessary libraries
+library(randomForest)
+library(caret)
+
+# Define the target variable
+feature_matrix$target <- ifelse(rownames(feature_matrix) %in% OSN_target_genes_subset, 1, 0)
+
+# Split data into training and test sets
+set.seed(123)  # For reproducibility
+train_indices <- createDataPartition(feature_matrix$target, p = 0.7, list = FALSE)
+train_data <- feature_matrix[train_indices, ]
+test_data <- feature_matrix[-train_indices, ]
+
+# Train a Random Forest model
+rf_model <- randomForest(as.factor(target) ~ ., data = train_data, importance = TRUE, ntree = 500)
+
+# Make predictions on the test set
+predictions <- predict(rf_model, test_data, type = "prob")[,2]
+
+# Convert probabilities to binary predictions (1 for targets, 0 for non-targets)
+predicted_targets <- ifelse(predictions > 0.5, 1, 0)
+
+# Evaluate the model
+confusion <- confusionMatrix(as.factor(predicted_targets), as.factor(test_data$target))
+print(confusion)
+
+# ROC Curve and AUC
+library(pROC)
+roc_curve <- roc(test_data$target, predictions)
+plot(roc_curve)
+auc_value <- auc(roc_curve)
+print(paste("AUC:", auc_value))
+
+```
+
+
+
+```{r}
+head(Transcriptome)
+```
+

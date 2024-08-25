@@ -1,0 +1,216 @@
+title: "OLET5602 Final Project: Transcription Factor Target Gene Prediction"
+author: "Declan Langreiter"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load necessary packages and data
+load("Final_Project_ESC.RData", verbose = TRUE)
+
+suppressPackageStartupMessages({
+    library(e1071)
+    #library(PhosR)
+    library(ggplot2)
+    library(ROCR)
+    library(dplyr)
+    library(tibble)
+    library(reshape2)
+    library(caret)
+    library(randomForest)
+    library(adabag)
+    library(gbm)
+    library(xgboost)
+    library(pROC)
+    library(doParallel)
+})
+
+# Ensure all data has the same set of genes
+genes <- intersect(rownames(Transcriptome), rownames(Proteome))
+genes <- intersect(genes, rownames(H3K4me3))
+genes <- intersect(genes, rownames(H3K27me3))
+genes <- intersect(genes, rownames(H3K27ac))
+genes <- intersect(genes, rownames(H3K4me1))
+genes <- intersect(genes, rownames(H3K9me2))
+genes <- intersect(genes, rownames(PolII))
+
+# Filter each dataset for the common genes
+Transcriptome_filter <- Transcriptome[genes, ]
+Proteome_filter <- Proteome[genes, ]
+H3K4me3_filter <- H3K4me3[genes, ]
+H3K27me3_filter <- H3K27me3[genes, ]
+H3K27ac_filter <- H3K27ac[genes, ]
+H3K4me1_filter <- H3K4me1[genes, ]
+H3K9me2_filter <- H3K9me2[genes, ]
+PolII_filter <- PolII[genes, ]
+
+# Rename columns to avoid conflicts
+colnames(Transcriptome_filter) <- paste("T_", colnames(Transcriptome_filter), sep = "")
+colnames(Proteome_filter) <- paste("P_", colnames(Proteome_filter), sep = "")
+colnames(H3K4me3_filter) <- paste("H3K4me3_", colnames(H3K4me3_filter), sep = "")
+colnames(H3K27me3_filter) <- paste("H3K27me3_", colnames(H3K27me3_filter), sep = "")
+colnames(H3K27ac_filter) <- paste("H3K27ac_", colnames(H3K27ac_filter), sep = "")
+colnames(H3K4me1_filter) <- paste("H3K4me1_", colnames(H3K4me1_filter), sep = "")
+colnames(H3K9me2_filter) <- paste("H3K9me2_", colnames(H3K9me2_filter), sep = "")
+colnames(PolII_filter) <- paste("PolII_", colnames(PolII_filter), sep = "")
+
+# Combine the datasets
+combined_data <- cbind(
+  Transcriptome_filter,
+  Proteome_filter,
+  H3K4me3_filter,
+  H3K27me3_filter,
+  H3K27ac_filter,
+  H3K4me1_filter,
+  H3K9me2_filter,
+  PolII_filter
+)
+
+# Add the labels
+label <- ifelse(genes %in% OSN_target_genes_subset, "OSN", "Other")
+combined_data <- data.frame(combined_data)
+combined_data$label <- factor(label)
+
+# Check the initial label distribution
+print(table(combined_data$label))
+
+# If using caret, create a balanced dataset using downsampling
+set.seed(123)
+downsampled_data <- downSample(x = combined_data[, -ncol(combined_data)], 
+                               y = combined_data$label, 
+                               yname = "label")
+
+# Check the balanced label distribution
+print(table(downsampled_data$label))
+
+# Final check of dataset dimensions
+print(dim(downsampled_data))
+
+```
+
+```{r}
+# Train an SVM model
+set.seed(123)
+svm_model <- svm(label ~ ., data = downsampled_data, kernel = "radial", probability = TRUE)
+
+# Make predictions using the SVM model
+svm_pred <- predict(svm_model, newdata = downsampled_data[, -ncol(downsampled_data)], probability = TRUE)
+
+# Extract probabilities for the positive class (OSN)
+svm_prob <- attr(svm_pred, "probabilities")[, "OSN"]
+
+```
+
+
+```{r}
+# Train a Random Forest model
+set.seed(123)
+rf_model <- randomForest(label ~ ., data = downsampled_data, ntree = 500)
+
+# Make predictions using the Random Forest model
+rf_pred <- predict(rf_model, newdata = downsampled_data[, -ncol(downsampled_data)], type = "prob")[, "OSN"]
+
+```
+
+
+```{r}
+# SVM Confusion Matrix
+svm_conf_matrix <- table(Predicted = svm_pred, Actual = downsampled_data$label)
+print("SVM Confusion Matrix:")
+print(svm_conf_matrix)
+
+# Random Forest Confusion Matrix
+rf_pred_class <- ifelse(rf_pred > 0.5, "OSN", "Other")
+rf_conf_matrix <- table(Predicted = rf_pred_class, Actual = downsampled_data$label)
+print("Random Forest Confusion Matrix:")
+print(rf_conf_matrix)
+
+```
+
+```{r}
+# SVM ROC Curve and AUC
+svm_roc <- roc(downsampled_data$label, svm_prob)
+plot(svm_roc, main = "SVM ROC Curve")
+svm_auc <- auc(svm_roc)
+print(paste("SVM AUC:", svm_auc))
+
+# Random Forest ROC Curve and AUC
+rf_roc <- roc(downsampled_data$label, rf_pred)
+plot(rf_roc, main = "Random Forest ROC Curve")
+rf_auc <- auc(rf_roc)
+print(paste("Random Forest AUC:", rf_auc))
+
+```
+```{r}
+
+# Cross-validation using 5-folds
+set.seed(123)
+svm_cv <- train(label ~ ., data = downsampled_data, method = "svmRadial", trControl = trainControl(method = "cv", number = 5), tuneLength = 5)
+print(svm_cv)
+
+rf_cv <- train(label ~ ., data = downsampled_data, method = "rf", trControl = trainControl(method = "cv", number = 5), tuneLength = 5)
+print(rf_cv)
+
+```
+
+# Bagging w/ Bagged Trees
+
+```{r}
+
+bagged_trees <- train(
+  label ~ .,
+  data = downsampled_data,
+  method = "treebag",
+  trControl = trainControl(method = "cv", number = 5),
+  tuneLength = 5
+)
+print(bagged_trees)
+
+```
+
+# GBM w/ Hyperparam Tuning and xgboost (using parallel processing)
+
+```{r}
+
+tune_grid_xgb <- expand.grid(
+  nrounds = c(100, 200),
+  max_depth = c(3, 6),
+  eta = c(0.1, 0.3),
+  gamma = c(0, 0.1),
+  colsample_bytree = c(0.5, 1),
+  min_child_weight = c(1, 10),
+  subsample = c(0.5, 1)
+)
+
+cl <- makeCluster(detectCores())
+registerDoParallel(cl)
+
+train_control <- trainControl(
+  method = "cv",
+  number = 3,
+  savePredictions = "final",
+  verboseIter = TRUE,
+  allowParallel = TRUE
+)
+
+xgb_model_tuned <- train(
+  label ~ .,
+  data = downsampled_data,
+  method = "xgbTree",
+  trControl = train_control,
+  tuneGrid = tune_grid_xgb,
+  metric = "Accuracy"  # Performance Metric
+)
+print(xgb_model_tuned)
+
+# Printing the best model's details
+print(xgb_model_tuned$bestTune)
+
+# Plotting model performance
+plot(xgb_model_tuned)
+
+
+```
