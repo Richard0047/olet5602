@@ -25,6 +25,8 @@ We will develop and validate a classification model to predict novel transcripti
 
 # Data Preparation
 
+
+
 ## Load Required Libraries and Data
 
 We start by loading the necessary R packages and the dataset `Final_Project_ESC.RData`, which contains the transcriptome, proteome, and epigenome data, along with a subset of known Sox2/Nanog target genes.
@@ -36,6 +38,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 # Load necessary packages and data
 load("Final_Project_ESC.RData", verbose = TRUE)
+
+#Install the calibrate Package
+install.packages("calibrate")
+library(calibrate)
 
 suppressPackageStartupMessages({
     library(e1071)
@@ -55,6 +61,132 @@ suppressPackageStartupMessages({
 })
 
 ```
+#Describe and explore the Data set details
+#Transcriptome
+
+head(Transcriptome)
+dim(Transcriptome)
+colnames(Transcriptome)
+
+# Load necessary libraries
+library(ggplot2)
+library(calibrate)
+
+# PCA analysis on the correlation matrix of the transcriptome data
+cor.mat <- cor(Transcriptome)
+pca.mat <- prcomp(cor.mat)
+
+# Plot the PCA
+grp <- rownames(pca.mat$x)
+grp.col <- rainbow(nrow(pca.mat$x))
+names(grp.col) <- rownames(pca.mat$x)
+
+# Generate PCA plot
+plot(pca.mat$x[,1], pca.mat$x[,2], col=grp.col[grp], pch=19, cex=2, 
+     xlab=paste0("PC1 (", round(summary(pca.mat)$importance[2,1]*100,1), "% variance)"),
+     ylab=paste0("PC2 (", round(summary(pca.mat)$importance[2,2]*100,1), "% variance)"))
+
+# Add sample labels to the plot
+calibrate::textxy(pca.mat$x[,1], pca.mat$x[,2], labs=grp, cex=0.5)
+
+#Proteome
+cor.proteome <- cor(Proteome)
+pca.proteome <- prcomp(cor.proteome)
+summary(pca.proteome)$importance
+
+# Using the previous correlation matrix and PCA results
+cor.proteome <- cor(Proteome)
+pca.proteome <- prcomp(cor.proteome)
+
+# Get group labels and colors
+grp <- rownames(pca.proteome$x)  # Set groups according to your data
+grp.col <- rainbow(nrow(pca.proteome$x))
+names(grp.col) <- rownames(pca.proteome$x)
+
+# Plot the PCA
+plot(pca.proteome$x[,1], pca.proteome$x[,2], col=grp.col[grp], pch=19, cex=2, 
+     xlab=paste0("PC1 (", round(summary(pca.proteome)$importance[2,1]*100,1), "% variance)"),
+     ylab=paste0("PC2 (", round(summary(pca.proteome)$importance[2,2]*100,1), "% variance)"))
+
+#General PCA and Plotting Code for Epigenome Data
+#h3k4me3
+# PCA analysis on the correlation matrix of the H3K4me3 data
+cor.h3k4me3 <- cor(H3K4me3)
+pca.h3k4me3 <- prcomp(cor.h3k4me3)
+
+# Get group labels and colors
+grp <- rownames(pca.h3k4me3$x)
+grp.col <- rainbow(nrow(pca.h3k4me3$x))
+names(grp.col) <- rownames(pca.h3k4me3$x)
+
+# Generate PCA plot for H3K4me3
+plot(pca.h3k4me3$x[,1], pca.h3k4me3$x[,2], col=grp.col[grp], pch=19, cex=2, 
+     xlab=paste0("PC1 (", round(summary(pca.h3k4me3)$importance[2,1]*100,1), "% variance)"),
+     ylab=paste0("PC2 (", round(summary(pca.h3k4me3)$importance[2,2]*100,1), "% variance)"))
+
+# Add sample labels to the plot
+calibrate::textxy(pca.h3k4me3$x[,1], pca.h3k4me3$x[,2], labs=grp, cex=0.5)
+
+#H3K27ac
+# PCA analysis for H3K27ac data
+cor.h3k27ac <- cor(H3K27ac)
+pca.h3k27ac <- prcomp(cor.h3k27ac)
+
+# Generate PCA plot for H3K27ac
+plot(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], col=grp.col[grp], pch=19, cex=2, 
+     xlab=paste0("PC1 (", round(summary(pca.h3k27ac)$importance[2,1]*100,1), "% variance)"),
+     ylab=paste0("PC2 (", round(summary(pca.h3k27ac)$importance[2,2]*100,1), "% variance)"))
+
+calibrate::textxy(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], labs=grp, cex=0.5)
+
+#H3K27me3
+# PCA analysis for H3K27me3 data
+cor.h3k27me3 <- cor(H3K27me3)
+pca.h3k27me3 <- prcomp(cor.h3k27me3)
+
+# Generate PCA plot for H3K27me3
+plot(pca.h3k27me3$x[,1], pca.h3k27me3$x[,2], col=grp.col[grp], pch=19, cex=2, 
+     xlab=paste0("PC1 (", round(summary(pca.h3k27me3)$importance[2,1]*100,1), "% variance)"),
+     ylab=paste0("PC2 (", round(summary(pca.h3k27me3)$importance[2,2]*100,1), "% variance)"))
+
+calibrate::textxy(pca.h3k27me3$x[,1], pca.h3k27me3$x[,2], labs=grp, cex=0.5)
+
+#H3K4me1
+# PCA analysis for H3K4me1 data
+cor.h3k4me1 <- cor(H3K4me1)
+pca.h3k4me1 <- prcomp(cor.h3k4me1)
+
+# Generate PCA plot for H3K4me1
+plot(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], col=grp.col[grp], pch=19, cex=2, 
+     xlab=paste0("PC1 (", round(summary(pca.h3k4me1)$importance[2,1]*100,1), "% variance)"),
+     ylab=paste0("PC2 (", round(summary(pca.h3k4me1)$importance[2,2]*100,1), "% variance)"))
+
+calibrate::textxy(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], labs=grp, cex=0.5)
+
+#H3K9me2
+# PCA analysis for H3K9me2 data
+cor.h3k9me2 <- cor(H3K9me2)
+pca.h3k9me2 <- prcomp(cor.h3k9me2)
+
+# Generate PCA plot for H3K9me2
+plot(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], col=grp.col[grp], pch=19, cex=2, 
+     xlab=paste0("PC1 (", round(summary(pca.h3k9me2)$importance[2,1]*100,1), "% variance)"),
+     ylab=paste0("PC2 (", round(summary(pca.h3k9me2)$importance[2,2]*100,1), "% variance)"))
+
+calibrate::textxy(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], labs=grp, cex=0.5)
+
+#PolII
+# PCA analysis for PolII data
+cor.polii <- cor(PolII)
+pca.polii <- prcomp(cor.polii)
+
+# Generate PCA plot for PolII
+plot(pca.polii$x[,1], pca.polii$x[,2], col=grp.col[grp], pch=19, cex=2, 
+     xlab=paste0("PC1 (", round(summary(pca.polii)$importance[2,1]*100,1), "% variance)"),
+     ylab=paste0("PC2 (", round(summary(pca.polii)$importance[2,2]*100,1), "% variance)"))
+
+calibrate::textxy(pca.polii$x[,1], pca.polii$x[,2], labs=grp, cex=0.5)
+
 
 ## Filter and Combine Datasets
 To ensure consistency across datasets, we filter each dataset to include only the common genes present in all omics layers. We then combine these filtered datasets into a single data frame for further analysis.
