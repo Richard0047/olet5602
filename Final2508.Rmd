@@ -1,9 +1,13 @@
 ---
-title: Factor Target Gene Prediction through Multi-Omics Datasets"
+title: "Factor Target Gene Prediction through Multi-Omics Datasets"
 author: "A. Kapoor, D. Langreiter, U. Samant"
 output:
-  pdf_document: default
+  pdf_document:
+    extra_dependencies: ["geometry"]
   html_document: default
+header-includes:
+  - \usepackage{listings}
+  - \lstset{breaklines=true}
 ---
 
 # Introduction
@@ -27,8 +31,16 @@ We will develop and validate a classification model to predict novel transcripti
 
 We start by loading the necessary R packages and the dataset `Final_Project_ESC.RData`, which contains the transcriptome, proteome, and epigenome data, along with a subset of known Sox2/Nanog target genes.
 
-```{r setup, include=FALSE}
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60), format='tidy')
 knitr::opts_chunk$set(echo = TRUE)
+htmltools::tags$style("
+  pre, code {
+    white-space: pre-wrap; /* Code and outputs wrap */
+    word-wrap: break-word; /* Break at word for long words */
+    overflow-wrap: break-word; /* Ensures words can be broken */
+  }
+")
 ```
 
 ```{r}
