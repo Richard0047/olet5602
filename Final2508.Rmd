@@ -17,7 +17,6 @@ output:
       heading_font:
         google: Merriweather
   pdf_document: default
-    extra_dependencies: ["geometry"]
 header-includes:
   - \usepackage{listings}
   - \lstset{breaklines=true}
@@ -424,10 +423,7 @@ print(dim(downsampled_train_data))
 ```
 
 ## Model Training
-<<<<<<< HEAD
-=======
 We train two machine learning models, SVM (with the radial kernel) and Random Forest, using the balanced training dataset.
->>>>>>> 93663ae (Add theme and format)
 
 Two models, SVM with a radial kernel and Random Forest, are trained using the balanced dataset to compare their performance under balanced class distribution conditions.
 
@@ -440,67 +436,11 @@ svm_model <- svm(label ~ ., data = downsampled_train_data, kernel = "radial", pr
 
 ```
 
-We can get the permutation importance for the SVM model:
-
-```{r}
-
-features <- downsampled_train_data[, -which(names(downsampled_train_data) == "label")]
-
-# Create a grid for the features
-xrange <- seq(min(features[,1]) - 1, max(features[,1]) + 1, by = 0.05)
-yrange <- seq(min(features[,2]) - 1, max(features[,2]) + 1, by = 0.05)
-grid <- expand.grid(x = xrange, y = yrange)
-
-# Predict probabilities for the grid points
-grid$prob <- predict(svm_model, grid, probability = TRUE, decision.values = TRUE)
-
-# Extract the decision values for plotting decision boundaries
-grid$decision <- attr(grid$prob, "decision.values")
-
-# Plotting the decision boundaries
-plot <- ggplot() +
-  geom_point(data = grid, aes(x = x, y = y, color = decision)) +
-  geom_point(data = downsampled_train_data, aes(x = downsampled_train_data[,1], y = downsampled_train_data[,2], color = label)) +
-  scale_color_gradient2(mid = "white", low = "blue", high = "red") +
-  labs(title = "SVM Decision Boundary", x = "Feature 1", y = "Feature 2") +
-  theme_minimal()
-
-# Print the plot
-print(plot)
-
-
-```
-
 ### Random Forest
 
 ```{r}
 # Train a Random Forest model
 rf_model <- randomForest(label ~ ., data = downsampled_train_data, ntree = 1000)
-
-```
-
-Here, we see the importance of each of the features in the model.
-
-```{r}
-
-
-# Extract feature importance
-importance_rf <- importance(rf_model)
-
-# Create a data frame for plotting
-feature_importance_df <- data.frame(
-  Feature = rownames(importance_rf),
-  Importance = importance_rf[, "%IncMSE"]
-)
-
-# Plot feature importance using ggplot2
-ggplot(feature_importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
-  geom_bar(stat = "identity") +
-  theme_minimal() +
-  labs(title = "Feature Importance from Random Forest Model",
-       x = "Feature",
-       y = "Increase in MSE") +
-  coord_flip()
 
 ```
 
@@ -732,6 +672,7 @@ print(rf_test_conf_matrix)
 To further assess model performance, we plot the ROC curves and calculate the AUC for both the SVM and Random Forest models.
 
 ```{r}
+
 # Evaluate the models on the test set (AUC and ROC)
 svm_test_roc <- roc(test_data$label, svm_test_prob)
 plot(svm_test_roc, main = "SVM ROC Curve")
