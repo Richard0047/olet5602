@@ -49,12 +49,16 @@ suppressPackageStartupMessages({
     library(adabag)
     library(gbm)
     library(xgboost)
+    library(nnet)
     library(pROC)
     library(doParallel)
     library(calibrate)
 })
 
+set.seed(123)
+
 ```
+
 # Describe and explore the Data set details
 
 Before beginning data analysis it is important understand and investigate the data. The goal of this report is to predict to predict novel transcription factor target genes from multi-omics data. For each of our datasets, one can look at the structure of the data and perform PCA Analysis as means of identifying trends in the dataset.
@@ -352,18 +356,20 @@ print(table(test_data$label))
 
 ### Balancing the Training Data
 
-Since the dataset is imbalanced, downsampling is used to create a balanced training dataset. This ensures that both classes (OSN and Other) are equally represented, improving the robustness of the classification model.
+To address the imbalance in the dataset, downsampling is employed to ensure both classes, `OSN` and `Other`, are represented equally. This technique enhances model accuracy and generalization by preventing bias towards the more frequent class.
 
 ```{r}
 # Balance the training data using downsampling
-set.seed(123)
 downsampled_train_data <- downSample(x = train_data[, -ncol(train_data)], 
                                      y = train_data$label, 
-                                     yname = "label")
+                                     list = FALSE, yname = "label")
 
-# Check the balanced label distribution
+# Display the new balanced label distribution
 print("Balanced training set label distribution:")
-print(table(downsampled_train_data$label))
+table(downsampled_train_data$label)
+
+# Display dimensions of the balanced training data
+dim(downsampled_train_data)
 ```
 
 ```{r}
@@ -374,24 +380,57 @@ print(dim(downsampled_train_data))
 
 ## Model Training
 
-We train two machine learning models, SVM (with the radial kernel) and Random Forest, using the balanced training dataset.
-
-```{r}
-# Set a consistent seed
-set.seed(123)
-```
+Two models, SVM with a radial kernel and Random Forest, are trained using the balanced dataset to compare their performance under balanced class distribution conditions.
 
 ```{r}
 # Train an SVM model on the downsampled training data with radial basis function kernel
 svm_model <- svm(label ~ ., data = downsampled_train_data, kernel = "radial", probability = TRUE)
 
-# Train a Random Forest model on the downsampled training data
-set.seed(123)
+# Train a Random Forest model
 rf_model <- randomForest(label ~ ., data = downsampled_train_data, ntree = 1000)
+
+# Extract and plot feature importance
+importance <- importance(rf_model)
+ord <- order(importance, decreasing = TRUE)
+barplot(importance[ord], main = "Feature Importance in Random Forest", col = 'blue')
 
 ```
 
+We can then perform corss-validation and finetune the hyperparameters, being careful not to overfit the model.
+
+```{r}
+
+# Define tuning grid and control setup
+tuning_grid <- expand.grid(mtry = seq(2, 5, by = 1))
+control <- trainControl(method = "cv", number = 5)
+
+# Tuning the model
+set.seed(123)
+tuned_rf_model <- train(label ~ ., data = downsampled_train_data,
+                        method = "rf", trControl = control, tuneGrid = tuning_grid)
+
+# Plotting tuning results
+plot(tuned_rf_model$finalModel, main="Random Forest Tuning")
+
+```
+
+Before conducting proper evaluation later on this report, we can briefly evaluate the performance of this model.
+
+```{r}
+
+rf_predictions <- predict(tuned_rf_model, newdata = test_data, type = "prob")
+roc_curve <- roc(response = test_data$label, predictor = as.numeric(rf_predictions[,2]))
+
+# Plot ROC curve
+plot(roc_curve, main = "ROC Curve for Random Forest")
+
+```
+
+Upon viewing the performance of the model above, it was clear that more could be done to optimise the model. As a result, the team decided to experiment with other models to evaluate the effectiveness of variations of standard random forest models.
+
 ### Bagging w/ Bagged Trees
+
+Bagging improves stability and accuracy by reducing variance and avoiding overfitting.
 
 ```{r}
 
@@ -406,10 +445,11 @@ print(bagged_trees)
 
 ```
 
-### GBM w/ Hyperparam Tuning and xgboost (using parallel processing)
+### Gradient Boosting with Hyperparameter Tuning Using xgboost (using parallel processing)
 
 ```{r}
 
+# Set up a tuning grid for xgboost
 tune_grid_xgb <- expand.grid(
   nrounds = c(100, 200),
   max_depth = c(3, 6),
@@ -420,9 +460,12 @@ tune_grid_xgb <- expand.grid(
   subsample = c(0.5, 1)
 )
 
+# Enable parallel processing
+library(doParallel)
 cl <- makeCluster(detectCores())
 registerDoParallel(cl)
 
+# Define control function for training
 train_control <- trainControl(
   method = "cv",
   number = 3,
@@ -431,22 +474,58 @@ train_control <- trainControl(
   allowParallel = TRUE
 )
 
+# Train xgboost model with tuning
+library(caret)
 xgb_model_tuned <- train(
   label ~ .,
   data = downsampled_train_data,
   method = "xgbTree",
   trControl = train_control,
   tuneGrid = tune_grid_xgb,
-  metric = "Accuracy"  # Performance Metric
+  metric = "Accuracy"
 )
-print(xgb_model_tuned)
-
-## Printing the best model's details
 print(xgb_model_tuned$bestTune)
 
-## Plotting model performance
+# Plot model performance
 plot(xgb_model_tuned)
-:
+
+```
+
+## Extended Model Training - Neural Networks
+
+To extend our understanding of the dataset and compare our Random Forest models against other classifiers, the team decided to evaluate the use of a neural network on the same training data.
+
+### Preparing Data and Feature Scaling
+
+Proper data scaling is necessary for the performance of a Neural Network due to the sensitivity of the implementation of the algorithm in R to the scale of input variables.
+
+```{r}
+
+scaled_data <- scale(downsampled_train_data[, -ncol(downsampled_train_data)])
+scaled_train_data <- data.frame(scaled_data, label = downsampled_train_data$label)
+
+```
+
+Then, as was done with the Random Forest model, the team trained the Neural Network with varying architectural parameters and visualizing the tuning process to identify the best model settings.
+
+```{r}
+
+# Setup for Neural Network training
+control_nn <- trainControl(method = "cv", number = 5, savePredictions = "final")
+grid_nn <- expand.grid(.size = c(5, 10), .decay = c(0.1, 0.01))
+
+# Train the Neural Network
+set.seed(123)
+nn_model <- train(label ~ ., data = scaled_train_data, method = "nnet", trControl = control_nn, tuneGrid = grid_nn, trace = FALSE)
+
+```
+
+We can then plot the model's performance.
+
+```{r}
+
+plot(nn_model)
+
 ```
 
 ## Model Evaluation
