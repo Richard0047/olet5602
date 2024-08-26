@@ -17,6 +17,7 @@ output:
       heading_font:
         google: Merriweather
   pdf_document: default
+    extra_dependencies: ["geometry"]
 header-includes:
   - \usepackage{listings}
   - \lstset{breaklines=true}
@@ -66,7 +67,7 @@ htmltools::tags$style("
   pre {
     white-space: pre-wrap;      /* Wrap text within pre blocks */
     word-wrap: break-word;      /* Allows long words to be broken and wrapped */
-    overflow-wrap: break-word;
+    overflow-wrap: break-word;  /* Ensures wrapping occurs at the edge of the container */
   }
 ")
 ```
@@ -88,13 +89,11 @@ suppressPackageStartupMessages({
     library(randomForest)
     library(adabag)
     library(gbm)
-    library(ggplotify)
     library(xgboost)
     library(nnet)
     library(pROC)
     library(doParallel)
     library(calibrate)
-    library(vip)
 })
 
 set.seed(123)
@@ -105,7 +104,9 @@ set.seed(123)
 
 Before beginning data analysis it is important understand and investigate the data. The goal of this report is to predict to predict novel transcription factor target genes from multi-omics data. For each of our datasets, one can look at the structure of the data and perform PCA Analysis as means of identifying trends in the dataset.
 
-Below is the temporal expression of the Transcriptome, Proteome, and Epigiome datasets at timepoints 0, 1, 6, 12, 24, 36, 48 hours.
+Below is the temporal expression of the Triptome, Proteome, and Epigiome datasets at timepoints 0, 1, 6, 12, 24, 36, 48 hours.
+
+
 
 ### Transcriptome
 
@@ -131,6 +132,13 @@ plot(pca.mat$x[,1], pca.mat$x[,2], col=grp.col[grp], pch=19, cex=2,
 # Add sample labels to the plot
 calibrate::textxy(pca.mat$x[,1], pca.mat$x[,2], labs=grp, cex=0.5)
 
+### Transcriptome Exploration 
+
+The transcriptome dataset documents the mRNA expression of 19,788 genes during embryonic stem cell differentiation at 8 time points (0 h to 72 h). At each time point, changes in gene activity were reflected as the cells progressed from a pluripotent state to a more differentiated stage.
+The PCA plots demonstrate the variance of gene expression at different time points. PC1 explains 61.4% of the variance, while PC2 accounts for 29.9%, meaning that these two principal components together capture most of the dynamic changes in the transcriptome data.
+The clear trajectory from 0 to 72 hours shows a clear time course of gene expression, which reflects the onset of the differentiation process.
+
+
 ```
 
 ### Proteome
@@ -155,6 +163,11 @@ plot(pca.proteome$x[,1], pca.proteome$x[,2], col=grp.col[grp], pch=19, cex=2,
      ylab=paste0("PC2 (", round(summary(pca.proteome)$importance[2,2]*100,1), "% variance)"))
 
 ```
+### Proteome Exploration 
+In the PCA analysis of proteomics, PC1 explained 67.6% of the variance, capturing most of the variation in the proteomic data.
+PC2  explained 21% of the variance, further revealing another layer of variation in protein expression differences. 
+
+The PCA plot shows a separation of samples on the PC1 and PC2 axes, indicating significant changes in protein expression over time. The trajectories in the PCA plot show gradual changes in protein levels as cells differentiate. 
 
 
 ### h3k4me3
@@ -176,6 +189,13 @@ plot(pca.h3k4me3$x[,1], pca.h3k4me3$x[,2], col=grp.col[grp], pch=19, cex=2,
 
 # Add sample labels to the plot
 calibrate::textxy(pca.h3k4me3$x[,1], pca.h3k4me3$x[,2], labs=grp, cex=0.5)
+
+### h3k4me3 Exploration
+By analyzing changes at different time points, the H3K4me3 dataset helps us understand chromatin dynamics during embryonic stem cell differentiation. The dataset covers histone modification levels at different time points (e.g., 1 h, 6 h, 24 h, 36 h, 48 h).
+
+PCA showed that PC1 explained 77.9% of the variance and PC2 explained 18.1%, suggesting that these two components capture most of the dynamic changes in H3K4me3 modifications during differentiation.
+
+PCA plots show the distribution of H3K4me3 modification patterns at each time point. Similar time points (e.g., H3K4me3_36h and H3K4me3_48h) are clustered together, indicating that they have similar modification patterns. In contrast, time points such as H3K4me3_1h and H3K4me3_24h are more dispersed, suggesting that histone modification patterns differ significantly at these stages of differentiation.
 
 ```
 
@@ -200,6 +220,11 @@ plot(pca.h3k27me3$x[,1], pca.h3k27me3$x[,2], col=grp.col.h3k27me3[grp.h3k27me3],
 # Correctly label the samples for H3K27me3
 calibrate::textxy(pca.h3k27me3$x[,1], pca.h3k27me3$x[,2], labs=grp.h3k27me3, cex=0.5)
 
+### H3K27me3 Exploration
+The H3K27me3 dataset, capturing histone modification levels at pivotal time points from 0 to 48 hours, is instrumental in studying the silencing of chromatin during cellular differentiation. PCA shows the variance with PC1 accounting for 91.2% and PC2 for 8.1%, thereby demonstrating the major changes in H3K27me3 markers. 
+
+The clustering observes in later stages like 36 and 48 hours in the PCA plot reflects a convergence in gene repression patterns, while the divergence at the early 0 and 1-hour marks indicates a distinct onset of repression. 
+
 ```
 
 ### H3K27ac
@@ -223,6 +248,10 @@ plot(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], col=grp.col.h3k27ac[grp.h3k27ac], pch
 # Correctly label the samples for H3K27ac
 calibrate::textxy(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], labs=grp.h3k27ac, cex=0.5)
 
+### H3K27ac Exploration
+H3K27ac is a marker active enhancer histone modification that is important for modulating gene expression during cellular differentiation. This dataset tracks histone modification changes at key time points from 1 hour to 48 hours.By PCA, PC1 explained 84% of the variance while PC2 explained 13.5%, which together captured the major trends in H3K27ac modification patterns over time.
+
+The PCA plots shows that later time points such as 36 hours and 48 hours clustered together, indicating similar enhancer activity at these time points. In contrast, early time points such as 1 hr and 6 hr were significantly different, reflecting unique histone modification patterns at the beginning of differentiation. 
 ```
 
 
@@ -245,6 +274,13 @@ plot(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], col=grp.col.h3k4me1[grp.h3k4me1], pch
 
 # Correctly label the samples for H3K4me1
 calibrate::textxy(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], labs=grp.h3k4me1, cex=0.5)
+
+### H3K4me1 Exploration
+H3K4me1 is a type of histone modification found in epigenomic data, playing a role in regulating gene expression during cellular differentiation. The dataset was collected at key time points, including 0, 1, 6, 12, 24, 36, and 48 hours, allowing for the examination of changes in chromatin states. 
+
+Through PCA, PC1 shows 85% of the variance, while PC2 shows 11.7%. The PCA plot indicates that similar enhancer activity patterns are observed in later stages such as 36 and 48 hours, whereas distinct enhancer modification patterns are exhibited in the early stages like 0 and 1 hour. 
+
+
 ```
 
 ### H3K9me2
@@ -266,6 +302,11 @@ plot(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], col=grp.col.h3k9me2[grp.h3k9me2], pch
 
 # Correctly label the samples for H3K9me2
 calibrate::textxy(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], labs=grp.h3k9me2, cex=0.5)
+
+### H3K9me2 Exploration
+H3K9me2 is a histone modification associated with gene repression that plays a role in maintaining heterochromatin structure during cell differentiation. Data were collected at multiple key time points including 0 hr, 1 hr, 6 hr, 12 hr, 24 hr, 36 hr, and 48 hr to monitor changes in this epigenetic mark.
+
+PCA showed that PC1 explained 83.6% of the variance, and PC2 explained an additional 13.1%. PCA plots revealed clustering at later stages, with data from 36 hr and 48 hr clustered together, suggesting similar levels of gene suppression activity. In contrast, early stages like 0 h and 1 h showed different patterns of repression.
 
 ```
 
@@ -289,6 +330,13 @@ plot(pca.polii$x[,1], pca.polii$x[,2], col=grp.col.polii[grp.polii], pch=19, cex
 
 # Correctly label the samples for PolII
 calibrate::textxy(pca.polii$x[,1], pca.polii$x[,2], labs=grp.polii, cex=0.5)
+
+### PolII Exploration
+
+PolII is responsible for transcribing DNA into mRNA, and its activity plays a crucial role in regulating gene expression during cellular differentiation. Data collected at various time points such as 0, 1, 6, 12, 24, 36, and 72 hours reveal the dynamic changes in PolII activity. PCA indicates that PC1 accounts for 60.7% of the variance, while PC2 accounts for 26%. 
+
+The PCA results show that in later stages like 36 and 72 hours, PolII binding patterns are similar, as indicated by their clustering together; whereas in the early stages such as 0 and 1 hour, PolII activity patterns are distinctly different, suggesting variations in the transcription initiation process.
+
 ```
 
 # Classification
@@ -299,7 +347,7 @@ In order to properly model and predicting novel transcription factors target gen
 To ensure consistency across datasets, we filter each dataset to include only the common genes present in all omics layers. We then combine these filtered datasets into a single data frame for further analysis.
 
 ```{r}
-# Verify all data has the same set of genes
+# Ensure all data has the same set of genes
 genes <- intersect(rownames(Transcriptome), rownames(Proteome))
 genes <- intersect(genes, rownames(H3K4me3))
 genes <- intersect(genes, rownames(H3K27me3))
@@ -375,7 +423,7 @@ print(table(combined_data$label))
 
 ### Data Splitting and Balancing
 
-The dataset is split into training (90%) and testing (10%) sets. The label column is reassigned to the test set to confirm that it is included correctly.
+The dataset is split into training (90%) and testing (10%) sets. The label column is reassigned to the test set to ensure that it is included correctly.
 
 ```{r}
 # Split the dataset into training (90%) and testing (10%) sets
@@ -399,7 +447,7 @@ print(table(test_data$label))
 
 ### Balancing the Training Data
 
-To address the imbalance in the dataset, downsampling is used on both classes, `OSN` and `Other`, to make sure they are represented equally. This technique improves the model's accuracy and generalization by preventing bias towards the more frequent class.
+To address the imbalance in the dataset, downsampling is employed to ensure both classes, `OSN` and `Other`, are represented equally. This technique enhances model accuracy and generalization by preventing bias towards the more frequent class.
 
 ```{r}
 # Balance the training data using downsampling
@@ -423,28 +471,28 @@ print(dim(downsampled_train_data))
 ```
 
 ## Model Training
+<<<<<<< HEAD
+=======
 We train two machine learning models, SVM (with the radial kernel) and Random Forest, using the balanced training dataset.
+>>>>>>> 93663ae (Add theme and format)
 
 Two models, SVM with a radial kernel and Random Forest, are trained using the balanced dataset to compare their performance under balanced class distribution conditions.
 
-### SVM
-
 ```{r}
-
 # Train an SVM model on the downsampled training data with radial basis function kernel
 svm_model <- svm(label ~ ., data = downsampled_train_data, kernel = "radial", probability = TRUE)
 
-```
-
-### Random Forest
-
-```{r}
 # Train a Random Forest model
 rf_model <- randomForest(label ~ ., data = downsampled_train_data, ntree = 1000)
 
+# Extract and plot feature importance
+importance <- importance(rf_model)
+ord <- order(importance, decreasing = TRUE)
+barplot(importance[ord], main = "Feature Importance in Random Forest", col = 'blue')
+
 ```
 
-We can then perform cross-validation and finetune the hyperparameters, being careful not to overfit the model.
+We can then perform corss-validation and finetune the hyperparameters, being careful not to overfit the model.
 
 ```{r}
 
@@ -462,7 +510,7 @@ plot(tuned_rf_model$finalModel, main="Random Forest Tuning")
 
 ```
 
-Before conducting proper evaluation later in this report, we can briefly evaluate the performance of this model.
+Before conducting proper evaluation later on this report, we can briefly evaluate the performance of this model.
 
 ```{r}
 
@@ -476,7 +524,7 @@ plot(roc_curve, main = "ROC Curve for Random Forest")
 
 Upon viewing the performance of the model above, it was clear that more could be done to optimise the model. As a result, the team decided to experiment with other models to evaluate the effectiveness of variations of standard random forest models.
 
-### Bagging with Bagged Trees
+### Bagging w/ Bagged Trees
 
 Bagging improves stability and accuracy by reducing variance and avoiding overfitting.
 
@@ -511,87 +559,35 @@ tune_grid_xgb <- expand.grid(
 )
 
 # Enable parallel processing
+library(doParallel)
 cl <- makeCluster(detectCores())
 registerDoParallel(cl)
 
-# Define control function with ROC as the metric
+# Define control function for training
 train_control <- trainControl(
   method = "cv",
   number = 3,
   savePredictions = "final",
   verboseIter = TRUE,
-  allowParallel = TRUE,
-  summaryFunction = twoClassSummary,  # Computes ROC and Sensitivity among others
-  classProbs = TRUE,  # Needed for ROC and AUC calculations
-  selectionFunction = "best"  # Chooses the best tuning parameters based on ROC
+  allowParallel = TRUE
 )
 
-
 # Train xgboost model with tuning
+library(caret)
 xgb_model_tuned <- train(
   label ~ .,
   data = downsampled_train_data,
   method = "xgbTree",
   trControl = train_control,
   tuneGrid = tune_grid_xgb,
-  metric = "ROC"
+  metric = "Accuracy"
 )
-
-# Stop and unregister parallel processing
-stopCluster(cl)
-registerDoSEQ()
-
-# Print the best tuning parameters
 print(xgb_model_tuned$bestTune)
 
-# Prepare data for plotting
-results <- xgb_model_tuned$results
-results$interaction <- interaction(results$max_depth, results$eta, results$gamma,
-                                     results$colsample_bytree,
-                                     results$min_child_weight,
-                                     results$subsample, drop = TRUE)
-
-results$interaction <- factor(results$interaction)
-results$simplified_interaction <- with(results, paste(max_depth, eta, sep=","))
-
-ggplot(data = results, aes(x = simplified_interaction, y = ROC)) +
-  geom_point(aes(color = as.factor(nrounds))) +
-  geom_line(aes(group = simplified_interaction, color = as.factor(nrounds))) +
-  facet_wrap(~ gamma, scales = "free_x") +
-  labs(title = "XGBoost Model Performance Across Hyperparameters",
-       x = "Hyperparameter Combination (Max Depth, ETA)",
-       y = "ROC AUC",
-       color = "Number of Rounds") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+# Plot model performance
+plot(xgb_model_tuned)
 
 ```
-
-As this graph isn't very useful, especially given the varying performance from various hypertuned models, we can make this clearer by removing all outputs below 0.5 to view the performance of the more successful models.
-
-```{r}
-
-# Filter the data to include only ROC AUC values above 0.5
-filtered_results <- results[results$ROC > 0.5,]
-
-# Create a readable label for the x-axis (simplifying or detailing as needed)
-filtered_results$readable_interaction <- with(filtered_results, paste("Depth:", max_depth, "ETA:", eta, "Gamma:", gamma, sep=" "))
-
-# Plot the performance focusing on ROC AUC values above 0.5
-library(ggplot2)
-ggplot(data = filtered_results, aes(x = readable_interaction, y = ROC)) +
-  geom_point(aes(color = as.factor(nrounds))) +
-  geom_line(aes(group = readable_interaction, color = as.factor(nrounds))) +
-  labs(title = "XGBoost Model Performance (ROC AUC > 0.5)",
-       x = "Hyperparameter Combination",
-       y = "ROC AUC",
-       color = "Number of Rounds") +
-  scale_y_continuous(limits = c(0.75, 0.85), breaks = seq(0.5, 1, by = 0.025)) +  # Setting y-axis to start at 0.5
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        plot.title = element_text(hjust = 0.5))  # Centering the plot title
-
-```
-
-It is notable that for all of the objectively 'high-performing' models (those with an ROC AUC greater than 0.5), there wasn't much fluctuation beyond a score of ± 0.05 about 0.8, or a 6.25% variation. Therefore, the hypothesis that hypertuning the model would improve its performance does not hold, as the cost of generating such a model does not warrant the marginal increase in performance.
 
 ## Extended Model Training - Neural Networks
 
@@ -635,7 +631,7 @@ Predictions and Confusion Matrix
 We use the trained models to make predictions on the test set and evaluate their performance using confusion matrices.
 
 ```{r}
-# Column names in the test set match the training data
+# Ensure column names in the test set match the training data
 colnames(test_data) <- colnames(downsampled_train_data)[1:(ncol(downsampled_train_data) - 1)]  # Exclude the label column
 
 # Check if the label column is present and correctly populated
@@ -646,7 +642,7 @@ if ("label" %in% colnames(combined_data) && length(combined_data[-train_index, "
     stop("The label vector is empty or has a different length than expected. Check the data preparation steps.")
 }
 
-# The label is a factor with the correct levels
+# Ensure the label is a factor with the correct levels
 test_data$label <- factor(test_data$label, levels = c("OSN", "Other"))
 
 # SVM Predictions on the test set
@@ -672,7 +668,6 @@ print(rf_test_conf_matrix)
 To further assess model performance, we plot the ROC curves and calculate the AUC for both the SVM and Random Forest models.
 
 ```{r}
-
 # Evaluate the models on the test set (AUC and ROC)
 svm_test_roc <- roc(test_data$label, svm_test_prob)
 plot(svm_test_roc, main = "SVM ROC Curve")
