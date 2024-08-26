@@ -67,7 +67,7 @@ htmltools::tags$style("
   pre {
     white-space: pre-wrap;      /* Wrap text within pre blocks */
     word-wrap: break-word;      /* Allows long words to be broken and wrapped */
-    overflow-wrap: break-word;  /* Ensures wrapping occurs at the edge of the container */
+    overflow-wrap: break-word;
   }
 ")
 ```
@@ -89,11 +89,13 @@ suppressPackageStartupMessages({
     library(randomForest)
     library(adabag)
     library(gbm)
+    library(ggplotify)
     library(xgboost)
     library(nnet)
     library(pROC)
     library(doParallel)
     library(calibrate)
+    library(vip)
 })
 
 set.seed(123)
@@ -298,7 +300,7 @@ In order to properly model and predicting novel transcription factors target gen
 To ensure consistency across datasets, we filter each dataset to include only the common genes present in all omics layers. We then combine these filtered datasets into a single data frame for further analysis.
 
 ```{r}
-# Ensure all data has the same set of genes
+# Verify all data has the same set of genes
 genes <- intersect(rownames(Transcriptome), rownames(Proteome))
 genes <- intersect(genes, rownames(H3K4me3))
 genes <- intersect(genes, rownames(H3K27me3))
@@ -374,7 +376,7 @@ print(table(combined_data$label))
 
 ### Data Splitting and Balancing
 
-The dataset is split into training (90%) and testing (10%) sets. The label column is reassigned to the test set to ensure that it is included correctly.
+The dataset is split into training (90%) and testing (10%) sets. The label column is reassigned to the test set to confirm that it is included correctly.
 
 ```{r}
 # Split the dataset into training (90%) and testing (10%) sets
@@ -398,7 +400,7 @@ print(table(test_data$label))
 
 ### Balancing the Training Data
 
-To address the imbalance in the dataset, downsampling is employed to ensure both classes, `OSN` and `Other`, are represented equally. This technique enhances model accuracy and generalization by preventing bias towards the more frequent class.
+To address the imbalance in the dataset, downsampling is used on both classes, `OSN` and `Other`, to make sure they are represented equally. This technique improves the model's accuracy and generalization by preventing bias towards the more frequent class.
 
 ```{r}
 # Balance the training data using downsampling
@@ -429,21 +431,80 @@ We train two machine learning models, SVM (with the radial kernel) and Random Fo
 
 Two models, SVM with a radial kernel and Random Forest, are trained using the balanced dataset to compare their performance under balanced class distribution conditions.
 
+### SVM
+
 ```{r}
+
 # Train an SVM model on the downsampled training data with radial basis function kernel
 svm_model <- svm(label ~ ., data = downsampled_train_data, kernel = "radial", probability = TRUE)
 
-# Train a Random Forest model
-rf_model <- randomForest(label ~ ., data = downsampled_train_data, ntree = 1000)
+```
 
-# Extract and plot feature importance
-importance <- importance(rf_model)
-ord <- order(importance, decreasing = TRUE)
-barplot(importance[ord], main = "Feature Importance in Random Forest", col = 'blue')
+We can get the permutation importance for the SVM model:
+
+```{r}
+
+features <- downsampled_train_data[, -which(names(downsampled_train_data) == "label")]
+
+# Create a grid for the features
+xrange <- seq(min(features[,1]) - 1, max(features[,1]) + 1, by = 0.05)
+yrange <- seq(min(features[,2]) - 1, max(features[,2]) + 1, by = 0.05)
+grid <- expand.grid(x = xrange, y = yrange)
+
+# Predict probabilities for the grid points
+grid$prob <- predict(svm_model, grid, probability = TRUE, decision.values = TRUE)
+
+# Extract the decision values for plotting decision boundaries
+grid$decision <- attr(grid$prob, "decision.values")
+
+# Plotting the decision boundaries
+plot <- ggplot() +
+  geom_point(data = grid, aes(x = x, y = y, color = decision)) +
+  geom_point(data = downsampled_train_data, aes(x = downsampled_train_data[,1], y = downsampled_train_data[,2], color = label)) +
+  scale_color_gradient2(mid = "white", low = "blue", high = "red") +
+  labs(title = "SVM Decision Boundary", x = "Feature 1", y = "Feature 2") +
+  theme_minimal()
+
+# Print the plot
+print(plot)
+
 
 ```
 
-We can then perform corss-validation and finetune the hyperparameters, being careful not to overfit the model.
+### Random Forest
+
+```{r}
+# Train a Random Forest model
+rf_model <- randomForest(label ~ ., data = downsampled_train_data, ntree = 1000)
+
+```
+
+Here, we see the importance of each of the features in the model.
+
+```{r}
+
+
+# Extract feature importance
+importance_rf <- importance(rf_model)
+
+# Create a data frame for plotting
+feature_importance_df <- data.frame(
+  Feature = rownames(importance_rf),
+  Importance = importance_rf[, "%IncMSE"]
+)
+
+# Plot feature importance using ggplot2
+ggplot(feature_importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Feature Importance from Random Forest Model",
+       x = "Feature",
+       y = "Increase in MSE") +
+  coord_flip()
+
+```
+
+We can then perform cross-validation and finetune the hyperparameters, being careful not to overfit the model.
 
 ```{r}
 
@@ -461,7 +522,7 @@ plot(tuned_rf_model$finalModel, main="Random Forest Tuning")
 
 ```
 
-Before conducting proper evaluation later on this report, we can briefly evaluate the performance of this model.
+Before conducting proper evaluation later in this report, we can briefly evaluate the performance of this model.
 
 ```{r}
 
@@ -475,7 +536,7 @@ plot(roc_curve, main = "ROC Curve for Random Forest")
 
 Upon viewing the performance of the model above, it was clear that more could be done to optimise the model. As a result, the team decided to experiment with other models to evaluate the effectiveness of variations of standard random forest models.
 
-### Bagging w/ Bagged Trees
+### Bagging with Bagged Trees
 
 Bagging improves stability and accuracy by reducing variance and avoiding overfitting.
 
@@ -510,35 +571,87 @@ tune_grid_xgb <- expand.grid(
 )
 
 # Enable parallel processing
-library(doParallel)
 cl <- makeCluster(detectCores())
 registerDoParallel(cl)
 
-# Define control function for training
+# Define control function with ROC as the metric
 train_control <- trainControl(
   method = "cv",
   number = 3,
   savePredictions = "final",
   verboseIter = TRUE,
-  allowParallel = TRUE
+  allowParallel = TRUE,
+  summaryFunction = twoClassSummary,  # Computes ROC and Sensitivity among others
+  classProbs = TRUE,  # Needed for ROC and AUC calculations
+  selectionFunction = "best"  # Chooses the best tuning parameters based on ROC
 )
 
+
 # Train xgboost model with tuning
-library(caret)
 xgb_model_tuned <- train(
   label ~ .,
   data = downsampled_train_data,
   method = "xgbTree",
   trControl = train_control,
   tuneGrid = tune_grid_xgb,
-  metric = "Accuracy"
+  metric = "ROC"
 )
+
+# Stop and unregister parallel processing
+stopCluster(cl)
+registerDoSEQ()
+
+# Print the best tuning parameters
 print(xgb_model_tuned$bestTune)
 
-# Plot model performance
-plot(xgb_model_tuned)
+# Prepare data for plotting
+results <- xgb_model_tuned$results
+results$interaction <- interaction(results$max_depth, results$eta, results$gamma,
+                                     results$colsample_bytree,
+                                     results$min_child_weight,
+                                     results$subsample, drop = TRUE)
+
+results$interaction <- factor(results$interaction)
+results$simplified_interaction <- with(results, paste(max_depth, eta, sep=","))
+
+ggplot(data = results, aes(x = simplified_interaction, y = ROC)) +
+  geom_point(aes(color = as.factor(nrounds))) +
+  geom_line(aes(group = simplified_interaction, color = as.factor(nrounds))) +
+  facet_wrap(~ gamma, scales = "free_x") +
+  labs(title = "XGBoost Model Performance Across Hyperparameters",
+       x = "Hyperparameter Combination (Max Depth, ETA)",
+       y = "ROC AUC",
+       color = "Number of Rounds") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 ```
+
+As this graph isn't very useful, especially given the varying performance from various hypertuned models, we can make this clearer by removing all outputs below 0.5 to view the performance of the more successful models.
+
+```{r}
+
+# Filter the data to include only ROC AUC values above 0.5
+filtered_results <- results[results$ROC > 0.5,]
+
+# Create a readable label for the x-axis (simplifying or detailing as needed)
+filtered_results$readable_interaction <- with(filtered_results, paste("Depth:", max_depth, "ETA:", eta, "Gamma:", gamma, sep=" "))
+
+# Plot the performance focusing on ROC AUC values above 0.5
+library(ggplot2)
+ggplot(data = filtered_results, aes(x = readable_interaction, y = ROC)) +
+  geom_point(aes(color = as.factor(nrounds))) +
+  geom_line(aes(group = readable_interaction, color = as.factor(nrounds))) +
+  labs(title = "XGBoost Model Performance (ROC AUC > 0.5)",
+       x = "Hyperparameter Combination",
+       y = "ROC AUC",
+       color = "Number of Rounds") +
+  scale_y_continuous(limits = c(0.75, 0.85), breaks = seq(0.5, 1, by = 0.025)) +  # Setting y-axis to start at 0.5
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        plot.title = element_text(hjust = 0.5))  # Centering the plot title
+
+```
+
+It is notable that for all of the objectively 'high-performing' models (those with an ROC AUC greater than 0.5), there wasn't much fluctuation beyond a score of ± 0.05 about 0.8, or a 6.25% variation. Therefore, the hypothesis that hypertuning the model would improve its performance does not hold, as the cost of generating such a model does not warrant the marginal increase in performance.
 
 ## Extended Model Training - Neural Networks
 
@@ -582,7 +695,7 @@ Predictions and Confusion Matrix
 We use the trained models to make predictions on the test set and evaluate their performance using confusion matrices.
 
 ```{r}
-# Ensure column names in the test set match the training data
+# Column names in the test set match the training data
 colnames(test_data) <- colnames(downsampled_train_data)[1:(ncol(downsampled_train_data) - 1)]  # Exclude the label column
 
 # Check if the label column is present and correctly populated
@@ -593,7 +706,7 @@ if ("label" %in% colnames(combined_data) && length(combined_data[-train_index, "
     stop("The label vector is empty or has a different length than expected. Check the data preparation steps.")
 }
 
-# Ensure the label is a factor with the correct levels
+# The label is a factor with the correct levels
 test_data$label <- factor(test_data$label, levels = c("OSN", "Other"))
 
 # SVM Predictions on the test set
