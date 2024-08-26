@@ -12,7 +12,7 @@ output:
 The aim of this project is to apply classification techniques to predict novel transcription factor target genes, focusing on Sox2 and Nanog during embryonic stem cell (ESC) differentiation.
 
 **Background:**  
-Transcriptional regulation is a fundamental process in all living organisms, driven by transcription factors that control mRNA expression. These transcriptional networks are crucial in development, lineage specification, and cell fate decisions during early embryonic development ([Theunissen and Jaenisch, 2017](https://doi.org/10.1038/nrm.2017.15)). Recent advances in omics technologies allow for the profiling of genome-wide transcriptional and epigenetic events, providing a deeper understanding of these networks.
+Transcriptional regulation is a fundamental ess in all living organisms, driven by transcription factors that control mRNA expression. These transcriptional networks are crucial in development, lineage specification, and cell fate decisions during early embryonic development ([Theunissen and Jaenisch, 2017](https://doi.org/10.1038/nrm.2017.15)). Recent advances in omics technologies allow for the profiling of genome-wide transcriptional and epigenetic events, providing a deeper understanding of these networks.
 
 In this project, we utilize high-temporal-resolution multi-omics data of ESC differentiation ([Yang et al., 2019](https://doi.org/10.1016/j.cell.2019.02.035)) to predict novel substrates of Sox2 and Nanog—two key transcription factors involved in maintaining pluripotency and guiding cell differentiation.
 
@@ -23,7 +23,7 @@ In this project, we utilize high-temporal-resolution multi-omics data of ESC dif
 
 We will develop and validate a classification model to predict novel transcription factor target genes, focusing on Sox2 and Nanog, using the provided multi-omics datasets.
 
-## Load Required Libraries and Data
+# Load Required Libraries and Data
 
 We start by loading the necessary R packages and the dataset `Final_Project_ESC.RData`, which contains the transcriptome, proteome, and epigenome data, along with a subset of known Sox2/Nanog target genes.
 
@@ -55,11 +55,11 @@ suppressPackageStartupMessages({
 })
 
 ```
-## Describe and explore the Data set details
-Before beginning data analysis it is important understand and investigate the data. The goal of this report is to predict to predict novel transcription factor target genes from multi-omics data. For each of our datasets lets look at the strcuture of the data and perform PCA Analysis.
+# Describe and explore the Data set details
+Before beginning data analysis it is important understand and investigate the data. The goal of this report is to predict to predict novel transcription factor target genes from multi-omics data. For each of our datasets lets look at the strcuture of the data and perform PCA Analysis as means of identifying trends in the dataset.
 
 
-### Transcriptome
+## Transcriptome
 
 ```{r}
 head(Transcriptome)
@@ -85,7 +85,7 @@ calibrate::textxy(pca.mat$x[,1], pca.mat$x[,2], labs=grp, cex=0.5)
 
 ```
 
-#### Proteome
+## Proteome
 
 ```{r}
 cor.proteome <- cor(Proteome)
@@ -109,7 +109,7 @@ plot(pca.proteome$x[,1], pca.proteome$x[,2], col=grp.col[grp], pch=19, cex=2,
 ```
 
 
-#### h3k4me3
+## h3k4me3
 
 ```{r}
 # PCA analysis on the correlation matrix of the H3K4me3 data
@@ -131,14 +131,34 @@ calibrate::textxy(pca.h3k4me3$x[,1], pca.h3k4me3$x[,2], labs=grp, cex=0.5)
 
 ```
 
-#H3K27me3
+## H3K27me3
 
+```{r}
 
 # PCA analysis for H3K27me3 data
 cor.h3k27me3 <- cor(H3K27me3)
 pca.h3k27me3 <- prcomp(cor.h3k27me3)
 
-cor.h3k27ac <- cor(h3k27ac)
+# Update group labels and colors for H3K27me3
+grp.h3k27me3 <- rownames(pca.h3k27me3$x)
+grp.col.h3k27me3 <- rainbow(nrow(pca.h3k27me3$x))
+names(grp.col.h3k27me3) <- rownames(pca.h3k27me3$x)
+
+# Generate PCA plot for H3K27me3
+plot(pca.h3k27me3$x[,1], pca.h3k27me3$x[,2], col=grp.col.h3k27me3[grp.h3k27me3], pch=19, cex=2, 
+     xlab=paste0("PC1 (", round(summary(pca.h3k27me3)$importance[2,1]*100,1), "% variance)"),
+     ylab=paste0("PC2 (", round(summary(pca.h3k27me3)$importance[2,2]*100,1), "% variance)"))
+
+# Correctly label the samples for H3K27me3
+calibrate::textxy(pca.h3k27me3$x[,1], pca.h3k27me3$x[,2], labs=grp.h3k27me3, cex=0.5)
+
+```
+
+## H3K27ac
+```{r}
+
+# PCA analysis for H3K27ac data
+cor.h3k27ac <- cor(H3K27ac)
 pca.h3k27ac <- prcomp(cor.h3k27ac)
 
 # Update group labels and colors for H3K27ac
@@ -154,9 +174,10 @@ plot(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], col=grp.col.h3k27ac[grp.h3k27ac], pch
 # Correctly label the samples for H3K27ac
 calibrate::textxy(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], labs=grp.h3k27ac, cex=0.5)
 
+```
 
 
-#H3K4me1
+## H3K4me1
 
 ```{r}
 # PCA analysis for H3K4me1 data
@@ -177,7 +198,7 @@ plot(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], col=grp.col.h3k4me1[grp.h3k4me1], pch
 calibrate::textxy(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], labs=grp.h3k4me1, cex=0.5)
 ```
 
-#H3K9me2
+## H3K9me2
 
 ```{r}
 # PCA analysis for H3K9me2 data
@@ -200,7 +221,7 @@ calibrate::textxy(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], labs=grp.h3k9me2, cex=0.
 ```
 
 
-#PolII
+## PolII
 
 ```{r}
 # PCA analysis for PolII data
@@ -221,8 +242,11 @@ plot(pca.polii$x[,1], pca.polii$x[,2], col=grp.col.polii[grp.polii], pch=19, cex
 calibrate::textxy(pca.polii$x[,1], pca.polii$x[,2], labs=grp.polii, cex=0.5)
 ```
 
+# Classification
 
 ## Filter and Combine Datasets
+In order to properly model and predicting novel transcription factors target genes we join the 8 datasets together and perform our calculations on the larger dataset.
+
 To ensure consistency across datasets, we filter each dataset to include only the common genes present in all omics layers. We then combine these filtered datasets into a single data frame for further analysis.
 
 ```{r}
@@ -236,6 +260,8 @@ genes <- intersect(genes, rownames(H3K9me2))
 genes <- intersect(genes, rownames(PolII))
 ```
 
+
+
 ```{r}
 # Filter each dataset for the common genes
 Transcriptome_filter <- Transcriptome[genes, ]
@@ -246,6 +272,14 @@ H3K27ac_filter <- H3K27ac[genes, ]
 H3K4me1_filter <- H3K4me1[genes, ]
 H3K9me2_filter <- H3K9me2[genes, ]
 PolII_filter <- PolII[genes, ]
+
+# Confirm that all datasets share the same gene
+identical(rownames(Transcriptome_filter), rownames(H3K4me3_filter))
+identical(rownames(Proteome_filter), rownames(H3K4me3_filter))
+identical(rownames(H3K27ac_filter), rownames(H3K4me3_filter))
+identical(rownames(H3K4me1_filter), rownames(H3K4me3_filter))
+identical(rownames(H3K9me2_filter), rownames(H3K4me3_filter))
+identical(rownames(PolII_filter), rownames(H3K4me3_filter))
 ```
 
 ```{r}
@@ -277,12 +311,21 @@ combined_data <- data.frame(combined_data)
 combined_data$label <- factor(label)
 ```
 
+
+```{r}
+# Number of genes which are known to be targets for Sox2 and Nanog
+length(OSN_target_genes_subset)
+```
+
+
+We have 100 known target genes for OSN, and as seen below the we have 95 genes that have been identified as novel Sox2/Nanog targets on our combined filtered dataset.
+
 ```{r}
 # Check the initial label distribution
 print(table(combined_data$label))
 ```
 
-## Data Splitting and Balancing
+### Data Splitting and Balancing
 
 The dataset is split into training (90%) and testing (10%) sets. The label column is reassigned to the test set to ensure that it is included correctly.
 
@@ -306,7 +349,7 @@ print(table(test_data$label))
 
 ```
 
-## Balancing the Training Data
+### Balancing the Training Data
 Since the dataset is imbalanced, downsampling is used to create a balanced training dataset. This ensures that both classes (OSN and Other) are equally represented, improving the robustness of the classification model.
 
 ```{r}
@@ -327,9 +370,9 @@ print(dim(downsampled_train_data))
 
 ```
 
-# Model Training
+## Model Training
 Train SVM and Random Forest Models
-We train two machine learning models, SVM and Random Forest, using the balanced training dataset.
+We train two machine learning models, SVM (with the radial kernel) and Random Forest, using the balanced training dataset.
 
 ```{r}
 # Set a consistent seed
@@ -346,7 +389,7 @@ rf_model <- randomForest(label ~ ., data = downsampled_train_data, ntree = 1000)
 
 ```
 
-## Bagging w/ Bagged Trees
+### Bagging w/ Bagged Trees
 
 ```{r}
 
@@ -361,7 +404,7 @@ print(bagged_trees)
 
 ```
 
-## GBM w/ Hyperparam Tuning and xgboost (using parallel processing)
+### GBM w/ Hyperparam Tuning and xgboost (using parallel processing)
 
 ```{r}
 
@@ -385,7 +428,7 @@ train_control <- trainControl(
   verboseIter = TRUE,
   allowParallel = TRUE
 )
-
+```
 xgb_model_tuned <- train(
   label ~ .,
   data = downsampled_train_data,
@@ -396,16 +439,14 @@ xgb_model_tuned <- train(
 )
 print(xgb_model_tuned)
 
-# Printing the best model's details
+## Printing the best model's details
 print(xgb_model_tuned$bestTune)
 
-# Plotting model performance
+## Plotting model performance
 plot(xgb_model_tuned)
+:
 
-
-```
-
-# Model Evaluation
+## Model Evaluation
 Predictions and Confusion Matrix
 We use the trained models to make predictions on the test set and evaluate their performance using confusion matrices.
 
@@ -458,7 +499,28 @@ print(paste("Final Random Forest Test AUC:", auc(rf_test_roc)))
 
 ```
 
-# Future Directions:
+```{r}
+
+# Evaluate SVM model on the test set (AUC and ROC)
+svm_test_roc <- roc(test_data$label, svm_test_prob)
+svm_test_auc <- round(auc(svm_test_roc), 4)
+
+# Plot ROC curve for SVM
+ggroc(svm_test_roc, colour = 'blue', size = 1.5) +
+  ggtitle(paste0('SVM ROC Curve (AUC = ', svm_test_auc, ')')) +
+  theme_minimal()
+
+# Evaluate Random Forest model on the test set (AUC and ROC)
+rf_test_roc <- roc(test_data$label, rf_test_pred)
+rf_test_auc <- round(auc(rf_test_roc), 4)
+
+# Plot ROC curve for Random Forest
+ggroc(rf_test_roc, colour = 'red', size = 1.5) +
+  ggtitle(paste0('Random Forest ROC Curve (AUC = ', rf_test_auc, ')')) +
+  theme_minimal()
+```
+
+## Future Directions:
 
 **Model Improvement:**  
 Further hyperparameter tuning using automated methods like grid search or random search could refine the model's accuracy. Additionally, exploring ensemble methods that combine predictions from several models might yield better results.
