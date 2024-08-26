@@ -1,10 +1,23 @@
 ---
-title: "Factor Target Gene Prediction through Multi-Omics Datasets"
-author: "A. Kapoor, D. Langreiter, U. Samant"
+title: Factor Target Gene Prediction through Multi-Omics Datasets
+subtitle: Hello
+author: "A. Kapoor, D. Langreiter, S. Udit, L. Richard"
+date: "University of Sydney | OLET5602 | `r format(Sys.time(), '%B, %Y')`"
 output:
-  pdf_document:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    theme:
+      bg: "white"
+      fg: "black"
+      primary: "#050A30"
+      base_font:
+        google: Montserrat
+      heading_font:
+        google: Merriweather
+  pdf_document: default
     extra_dependencies: ["geometry"]
-  html_document: default
 header-includes:
   - \usepackage{listings}
   - \lstset{breaklines=true}
@@ -12,11 +25,11 @@ header-includes:
 
 # Introduction
 
-**Aim:**  
-The aim of this project is to apply classification techniques to predict novel transcription factor target genes, focusing on Sox2 and Nanog during embryonic stem cell (ESC) differentiation.
+**Aim:**
+The aim of this project is to apply classification techniques to predict novel transcription factor target genes, focusing on Sox2 and Nanog during embryonic stem cell (ESC) differentiation from muliomics data.
 
-**Background:**  
-Transcriptional regulation is a fundamental ess in all living organisms, driven by transcription factors that control mRNA expression. These transcriptional networks are crucial in development, lineage specification, and cell fate decisions during early embryonic development ([Theunissen and Jaenisch, 2017](https://doi.org/10.1038/nrm.2017.15)). Recent advances in omics technologies allow for the profiling of genome-wide transcriptional and epigenetic events, providing a deeper understanding of these networks.
+**Background:**
+  Transcriptional regulation is a fundamental ess in all living organisms, driven by transcription factors that control mRNA expression. These transcriptional networks are crucial in development, lineage specification, and cell fate decisions during early embryonic development ([Theunissen and Jaenisch, 2017](https://doi.org/10.1038/nrm.2017.15)). Recent advances in omics technologies allow for the profiling of genome-wide transcriptional and epigenetic events, providing a deeper understanding of these networks.
 
 In this project, we utilize high-temporal-resolution multi-omics data of ESC differentiation ([Yang et al., 2019](https://doi.org/10.1016/j.cell.2019.02.035)) to predict novel substrates of Sox2 and Nanog—two key transcription factors involved in maintaining pluripotency and guiding cell differentiation.
 
@@ -27,7 +40,8 @@ In this project, we utilize high-temporal-resolution multi-omics data of ESC dif
 
 We will develop and validate a classification model to predict novel transcription factor target genes, focusing on Sox2 and Nanog, using the provided multi-omics datasets.
 
-# Load Required Libraries and Data
+# EDA
+## Load Required Libraries and Data
 
 We start by loading the necessary R packages and the dataset `Final_Project_ESC.RData`, which contains the transcriptome, proteome, and epigenome data, along with a subset of known Sox2/Nanog target genes.
 
@@ -72,12 +86,15 @@ set.seed(123)
 
 ```
 
-# Describe and explore the Data set details
+## Describe and explore the Data set details
 
 Before beginning data analysis it is important understand and investigate the data. The goal of this report is to predict to predict novel transcription factor target genes from multi-omics data. For each of our datasets, one can look at the structure of the data and perform PCA Analysis as means of identifying trends in the dataset.
 
+Below is the temporal expression of the Triptome, Proteome, and Epigiome datasets at timepoints 0, 1, 6, 12, 24, 36, 48 hours.
 
-## Transcriptome
+
+
+### Transcriptome
 
 ```{r}
 head(Transcriptome)
@@ -94,7 +111,7 @@ grp.col <- rainbow(nrow(pca.mat$x))
 names(grp.col) <- rownames(pca.mat$x)
 
 # Generate PCA plot
-plot(pca.mat$x[,1], pca.mat$x[,2], col=grp.col[grp], pch=19, cex=2, 
+plot(pca.mat$x[,1], pca.mat$x[,2], col=grp.col[grp], pch=19, cex=2,
      xlab=paste0("PC1 (", round(summary(pca.mat)$importance[2,1]*100,1), "% variance)"),
      ylab=paste0("PC2 (", round(summary(pca.mat)$importance[2,2]*100,1), "% variance)"))
 
@@ -103,7 +120,7 @@ calibrate::textxy(pca.mat$x[,1], pca.mat$x[,2], labs=grp, cex=0.5)
 
 ```
 
-## Proteome
+### Proteome
 
 ```{r}
 cor.proteome <- cor(Proteome)
@@ -120,14 +137,14 @@ grp.col <- rainbow(nrow(pca.proteome$x))
 names(grp.col) <- rownames(pca.proteome$x)
 
 # Plot the PCA
-plot(pca.proteome$x[,1], pca.proteome$x[,2], col=grp.col[grp], pch=19, cex=2, 
+plot(pca.proteome$x[,1], pca.proteome$x[,2], col=grp.col[grp], pch=19, cex=2,
      xlab=paste0("PC1 (", round(summary(pca.proteome)$importance[2,1]*100,1), "% variance)"),
      ylab=paste0("PC2 (", round(summary(pca.proteome)$importance[2,2]*100,1), "% variance)"))
 
 ```
 
 
-## h3k4me3
+### h3k4me3
 
 ```{r}
 # PCA analysis on the correlation matrix of the H3K4me3 data
@@ -140,7 +157,7 @@ grp.col <- rainbow(nrow(pca.h3k4me3$x))
 names(grp.col) <- rownames(pca.h3k4me3$x)
 
 # Generate PCA plot for H3K4me3
-plot(pca.h3k4me3$x[,1], pca.h3k4me3$x[,2], col=grp.col[grp], pch=19, cex=2, 
+plot(pca.h3k4me3$x[,1], pca.h3k4me3$x[,2], col=grp.col[grp], pch=19, cex=2,
      xlab=paste0("PC1 (", round(summary(pca.h3k4me3)$importance[2,1]*100,1), "% variance)"),
      ylab=paste0("PC2 (", round(summary(pca.h3k4me3)$importance[2,2]*100,1), "% variance)"))
 
@@ -149,7 +166,7 @@ calibrate::textxy(pca.h3k4me3$x[,1], pca.h3k4me3$x[,2], labs=grp, cex=0.5)
 
 ```
 
-## H3K27me3
+### H3K27me3
 
 ```{r}
 
@@ -163,7 +180,7 @@ grp.col.h3k27me3 <- rainbow(nrow(pca.h3k27me3$x))
 names(grp.col.h3k27me3) <- rownames(pca.h3k27me3$x)
 
 # Generate PCA plot for H3K27me3
-plot(pca.h3k27me3$x[,1], pca.h3k27me3$x[,2], col=grp.col.h3k27me3[grp.h3k27me3], pch=19, cex=2, 
+plot(pca.h3k27me3$x[,1], pca.h3k27me3$x[,2], col=grp.col.h3k27me3[grp.h3k27me3], pch=19, cex=2,
      xlab=paste0("PC1 (", round(summary(pca.h3k27me3)$importance[2,1]*100,1), "% variance)"),
      ylab=paste0("PC2 (", round(summary(pca.h3k27me3)$importance[2,2]*100,1), "% variance)"))
 
@@ -172,7 +189,7 @@ calibrate::textxy(pca.h3k27me3$x[,1], pca.h3k27me3$x[,2], labs=grp.h3k27me3, cex
 
 ```
 
-## H3K27ac
+### H3K27ac
 
 ```{r}
 
@@ -186,7 +203,7 @@ grp.col.h3k27ac <- rainbow(nrow(pca.h3k27ac$x))
 names(grp.col.h3k27ac) <- rownames(pca.h3k27ac$x)
 
 # Generate PCA plot for H3K27ac
-plot(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], col=grp.col.h3k27ac[grp.h3k27ac], pch=19, cex=2, 
+plot(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], col=grp.col.h3k27ac[grp.h3k27ac], pch=19, cex=2,
      xlab=paste0("PC1 (", round(summary(pca.h3k27ac)$importance[2,1]*100,1), "% variance)"),
      ylab=paste0("PC2 (", round(summary(pca.h3k27ac)$importance[2,2]*100,1), "% variance)"))
 
@@ -196,7 +213,7 @@ calibrate::textxy(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], labs=grp.h3k27ac, cex=0.
 ```
 
 
-## H3K4me1
+### H3K4me1
 
 ```{r}
 # PCA analysis for H3K4me1 data
@@ -209,7 +226,7 @@ grp.col.h3k4me1 <- rainbow(nrow(pca.h3k4me1$x))
 names(grp.col.h3k4me1) <- rownames(pca.h3k4me1$x)
 
 # Generate PCA plot for H3K4me1
-plot(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], col=grp.col.h3k4me1[grp.h3k4me1], pch=19, cex=2, 
+plot(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], col=grp.col.h3k4me1[grp.h3k4me1], pch=19, cex=2,
      xlab=paste0("PC1 (", round(summary(pca.h3k4me1)$importance[2,1]*100,1), "% variance)"),
      ylab=paste0("PC2 (", round(summary(pca.h3k4me1)$importance[2,2]*100,1), "% variance)"))
 
@@ -217,7 +234,7 @@ plot(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], col=grp.col.h3k4me1[grp.h3k4me1], pch
 calibrate::textxy(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], labs=grp.h3k4me1, cex=0.5)
 ```
 
-## H3K9me2
+### H3K9me2
 
 ```{r}
 # PCA analysis for H3K9me2 data
@@ -230,7 +247,7 @@ grp.col.h3k9me2 <- rainbow(nrow(pca.h3k9me2$x))
 names(grp.col.h3k9me2) <- rownames(pca.h3k9me2$x)
 
 # Generate PCA plot for H3K9me2
-plot(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], col=grp.col.h3k9me2[grp.h3k9me2], pch=19, cex=2, 
+plot(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], col=grp.col.h3k9me2[grp.h3k9me2], pch=19, cex=2,
      xlab=paste0("PC1 (", round(summary(pca.h3k9me2)$importance[2,1]*100,1), "% variance)"),
      ylab=paste0("PC2 (", round(summary(pca.h3k9me2)$importance[2,2]*100,1), "% variance)"))
 
@@ -240,7 +257,7 @@ calibrate::textxy(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], labs=grp.h3k9me2, cex=0.
 ```
 
 
-## PolII
+### PolII
 
 ```{r}
 # PCA analysis for PolII data
@@ -253,7 +270,7 @@ grp.col.polii <- rainbow(nrow(pca.polii$x))
 names(grp.col.polii) <- rownames(pca.polii$x)
 
 # Generate PCA plot for PolII
-plot(pca.polii$x[,1], pca.polii$x[,2], col=grp.col.polii[grp.polii], pch=19, cex=2, 
+plot(pca.polii$x[,1], pca.polii$x[,2], col=grp.col.polii[grp.polii], pch=19, cex=2,
      xlab=paste0("PC1 (", round(summary(pca.polii)$importance[2,1]*100,1), "% variance)"),
      ylab=paste0("PC2 (", round(summary(pca.polii)$importance[2,2]*100,1), "% variance)"))
 
@@ -373,8 +390,9 @@ To address the imbalance in the dataset, downsampling is employed to ensure both
 
 ```{r}
 # Balance the training data using downsampling
-downsampled_train_data <- downSample(x = train_data[, -ncol(train_data)], 
-                                     y = train_data$label, 
+set.seed(123)
+downsampled_train_data <- downSample(x = train_data[, -ncol(train_data)],
+                                     y = train_data$label,
                                      list = FALSE, yname = "label")
 
 # Display the new balanced label distribution
@@ -392,6 +410,10 @@ print(dim(downsampled_train_data))
 ```
 
 ## Model Training
+<<<<<<< HEAD
+=======
+We train two machine learning models, SVM (with the radial kernel) and Random Forest, using the balanced training dataset.
+>>>>>>> 93663ae (Add theme and format)
 
 Two models, SVM with a radial kernel and Random Forest, are trained using the balanced dataset to compare their performance under balanced class distribution conditions.
 
@@ -459,6 +481,8 @@ print(bagged_trees)
 ```
 
 ### Gradient Boosting with Hyperparameter Tuning Using xgboost (using parallel processing)
+
+For hyperparameters tuning we define the grid of paramaters below and train an XGB Model on the downsampled data. We use cross validation as means to providing a reliable model that is not overfit, and allow the model to be trained in parallel.
 
 ```{r}
 
@@ -594,34 +618,14 @@ print(paste("Final Random Forest Test AUC:", auc(rf_test_roc)))
 
 ```
 
-```{r}
-
-# Evaluate SVM model on the test set (AUC and ROC)
-svm_test_roc <- roc(test_data$label, svm_test_prob)
-svm_test_auc <- round(auc(svm_test_roc), 4)
-
-# Plot ROC curve for SVM
-ggroc(svm_test_roc, colour = 'blue', size = 1.5) +
-  ggtitle(paste0('SVM ROC Curve (AUC = ', svm_test_auc, ')')) +
-  theme_minimal()
-
-# Evaluate Random Forest model on the test set (AUC and ROC)
-rf_test_roc <- roc(test_data$label, rf_test_pred)
-rf_test_auc <- round(auc(rf_test_roc), 4)
-
-# Plot ROC curve for Random Forest
-ggroc(rf_test_roc, colour = 'red', size = 1.5) +
-  ggtitle(paste0('Random Forest ROC Curve (AUC = ', rf_test_auc, ')')) +
-  theme_minimal()
-```
 
 ## Future Directions:
 
-**Model Improvement:**  
+**Model Improvement:**
 Further hyperparameter tuning using automated methods like grid search or random search could refine the model's accuracy. Additionally, exploring ensemble methods that combine predictions from several models might yield better results.
 
-**Data Expansion:**  
+**Data Expansion:**
 Incorporating additional omics layers, such as metabolomics or additional transcription factor binding profiles, could help to improve the model's predictive power and generalisability.
 
-**Integration with Clinical Data:**  
+**Integration with Clinical Data:**
 Linking omics profiles with clinical outcomes could also be explored to improve the translational impact of the research.
