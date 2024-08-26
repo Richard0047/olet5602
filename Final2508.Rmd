@@ -134,9 +134,9 @@ calibrate::textxy(pca.mat$x[,1], pca.mat$x[,2], labs=grp, cex=0.5)
 
 ### Transcriptome Exploration 
 
-The transcriptome dataset documents the mRNA expression of 19,788 genes during embryonic stem cell differentiation at 8 time points (0 h to 72 h). At each time point, changes in gene activity were reflected as the cells progressed from a pluripotent state to a more differentiated stage.
-The PCA plots demonstrate the variance of gene expression at different time points. PC1 explains 61.4% of the variance, while PC2 accounts for 29.9%, meaning that these two principal components together capture most of the dynamic changes in the transcriptome data.
-The clear trajectory from 0 to 72 hours shows a clear time course of gene expression, which reflects the onset of the differentiation process.
+The transcriptome dataset recorded mRNA expression of 19,788 genes at 8 time points (0 hr to 72 hr).
+PCA plots showed differences in gene expression at different time points. pc1 explained 61.4% of the variance, whereas pc2 accounted for 29.9% of the variance.
+The clear trajectory from 0 to 72 hours shows a clear time course of gene expression, which reflects the beginning of the differentiation process.
 
 
 ```
@@ -164,10 +164,9 @@ plot(pca.proteome$x[,1], pca.proteome$x[,2], col=grp.col[grp], pch=19, cex=2,
 
 ```
 ### Proteome Exploration 
-In the PCA analysis of proteomics, PC1 explained 67.6% of the variance, capturing most of the variation in the proteomic data.
-PC2  explained 21% of the variance, further revealing another layer of variation in protein expression differences. 
+In the proteomic PCA, PC1 explains 67.6% of the variance, which represents the majority of the variance in the proteomic data. pC2 explains 21% of the variance, which explains another portion of the variance in protein expression differences.
 
-The PCA plot shows a separation of samples on the PC1 and PC2 axes, indicating significant changes in protein expression over time. The trajectories in the PCA plot show gradual changes in protein levels as cells differentiate. 
+The PCA plot shows the separation of samples on the PC1 and PC2 axes, indicating significant changes in protein expression over time. And the trajectory in the PCA plot simultaneously shows the gradual change in protein levels during cell differentiation.
 
 
 ### h3k4me3
@@ -191,11 +190,11 @@ plot(pca.h3k4me3$x[,1], pca.h3k4me3$x[,2], col=grp.col[grp], pch=19, cex=2,
 calibrate::textxy(pca.h3k4me3$x[,1], pca.h3k4me3$x[,2], labs=grp, cex=0.5)
 
 ### h3k4me3 Exploration
-By analyzing changes at different time points, the H3K4me3 dataset helps us understand chromatin dynamics during embryonic stem cell differentiation. The dataset covers histone modification levels at different time points (e.g., 1 h, 6 h, 24 h, 36 h, 48 h).
+The H3K4me3 dataset included histone modification levels at different time points of 1 h, 6 h, 24 h, 36 h, and 48 h. The H3K4me3 dataset was analyzed by PCA. PCA showed that PC1 explained 77.9% of the variance and PC2 explained 18.1% of the variance.
 
-PCA showed that PC1 explained 77.9% of the variance and PC2 explained 18.1%, suggesting that these two components capture most of the dynamic changes in H3K4me3 modifications during differentiation.
+PCA plots show the distribution of H3K4me3 modification patterns at each time point. Similar time points (e.g., H3K4me3_36h and H3K4me3_48h) are clustered together, indicating that they have similar modification patterns.
 
-PCA plots show the distribution of H3K4me3 modification patterns at each time point. Similar time points (e.g., H3K4me3_36h and H3K4me3_48h) are clustered together, indicating that they have similar modification patterns. In contrast, time points such as H3K4me3_1h and H3K4me3_24h are more dispersed, suggesting that histone modification patterns differ significantly at these stages of differentiation.
+In contrast, time points such as H3K4me3_1h and H3K4me3_24h are more dispersed, suggesting that histone modification patterns differ significantly at these stages of differentiation.
 
 ```
 
@@ -221,9 +220,9 @@ plot(pca.h3k27me3$x[,1], pca.h3k27me3$x[,2], col=grp.col.h3k27me3[grp.h3k27me3],
 calibrate::textxy(pca.h3k27me3$x[,1], pca.h3k27me3$x[,2], labs=grp.h3k27me3, cex=0.5)
 
 ### H3K27me3 Exploration
-The H3K27me3 dataset, capturing histone modification levels at pivotal time points from 0 to 48 hours, is instrumental in studying the silencing of chromatin during cellular differentiation. PCA shows the variance with PC1 accounting for 91.2% and PC2 for 8.1%, thereby demonstrating the major changes in H3K27me3 markers. 
+The H3K27me3 dataset captures histone modification levels at key time points from 0 to 48 h. PCA reality, 91.2% for PC1 and 8.1% for PC2, with PC1 indicating the major changes in H3K27me3 labeling.
 
-The clustering observes in later stages like 36 and 48 hours in the PCA plot reflects a convergence in gene repression patterns, while the divergence at the early 0 and 1-hour marks indicates a distinct onset of repression. 
+The clustering observed in the PCA plots at later stages such as 36 and 48 hours reflects a convergent aggregation of gene repression patterns, whereas the divergence at 0 and early 1 hour indicates a clear onset of repression.
 
 ```
 
@@ -249,9 +248,8 @@ plot(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], col=grp.col.h3k27ac[grp.h3k27ac], pch
 calibrate::textxy(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], labs=grp.h3k27ac, cex=0.5)
 
 ### H3K27ac Exploration
-H3K27ac is a marker active enhancer histone modification that is important for modulating gene expression during cellular differentiation. This dataset tracks histone modification changes at key time points from 1 hour to 48 hours.By PCA, PC1 explained 84% of the variance while PC2 explained 13.5%, which together captured the major trends in H3K27ac modification patterns over time.
+H3K27ac by PCA, with PC1 explaining 84% of the variance and PC2 13.5%. The PCA plots show that later time points such as 36 hours and 48 hours cluster together, indicating the similarity of these time points. In contrast, earlier time points such as 1 hour and 6 hours were significantly different.
 
-The PCA plots shows that later time points such as 36 hours and 48 hours clustered together, indicating similar enhancer activity at these time points. In contrast, early time points such as 1 hr and 6 hr were significantly different, reflecting unique histone modification patterns at the beginning of differentiation. 
 ```
 
 
@@ -276,9 +274,9 @@ plot(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], col=grp.col.h3k4me1[grp.h3k4me1], pch
 calibrate::textxy(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], labs=grp.h3k4me1, cex=0.5)
 
 ### H3K4me1 Exploration
-H3K4me1 is a type of histone modification found in epigenomic data, playing a role in regulating gene expression during cellular differentiation. The dataset was collected at key time points, including 0, 1, 6, 12, 24, 36, and 48 hours, allowing for the examination of changes in chromatin states. 
+The H3K4me1 dataset includes 0, 1, 6, 12, 24, 36 and 48 hours. By PCA, PC1 showed 85% of the variance while PC2 showed 11.7% of the variance.
 
-Through PCA, PC1 shows 85% of the variance, while PC2 shows 11.7%. The PCA plot indicates that similar enhancer activity patterns are observed in later stages such as 36 and 48 hours, whereas distinct enhancer modification patterns are exhibited in the early stages like 0 and 1 hour. 
+The PCA plots show a similar pattern at the early stages such as 0 hours and 1 hour. Whereas, a gradual differentiation pattern was observed at later stages such as after 12 hours, 36 hours and 48 hours.
 
 
 ```
@@ -304,10 +302,9 @@ plot(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], col=grp.col.h3k9me2[grp.h3k9me2], pch
 calibrate::textxy(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], labs=grp.h3k9me2, cex=0.5)
 
 ### H3K9me2 Exploration
-H3K9me2 is a histone modification associated with gene repression that plays a role in maintaining heterochromatin structure during cell differentiation. Data were collected at multiple key time points including 0 hr, 1 hr, 6 hr, 12 hr, 24 hr, 36 hr, and 48 hr to monitor changes in this epigenetic mark.
+The H3K9me2 dataset consisted of 0 hours, 1 hour, 6 hours, 12 hours, 24 hours, 36 hours and 48 hours.
 
-PCA showed that PC1 explained 83.6% of the variance, and PC2 explained an additional 13.1%. PCA plots revealed clustering at later stages, with data from 36 hr and 48 hr clustered together, suggesting similar levels of gene suppression activity. In contrast, early stages like 0 h and 1 h showed different patterns of repression.
-
+PCA shows that PC1 explains 83.6% of the variance and PC2 explains the other 13.1% of the variance.The PCA plot shows clustering of the early stages, with the 0-hour and 1-hour data clustered together, indicating similar levels. In contrast, later stages such as 36 and 48 hours show different patterns.
 ```
 
 
