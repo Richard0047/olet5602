@@ -104,9 +104,7 @@ set.seed(123)
 
 Before beginning data analysis it is important understand and investigate the data. The goal of this report is to predict to predict novel transcription factor target genes from multi-omics data. For each of our datasets, one can look at the structure of the data and perform PCA Analysis as means of identifying trends in the dataset.
 
-Below is the temporal expression of the Triptome, Proteome, and Epigiome datasets at timepoints 0, 1, 6, 12, 24, 36, 48 hours.
-
-
+Below is the temporal expression of the Transcriptome, Proteome, and Epigiome datasets at timepoints 0, 1, 6, 12, 24, 36, 48 hours.
 
 ### Transcriptome
 
