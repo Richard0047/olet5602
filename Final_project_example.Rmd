@@ -19,11 +19,10 @@ This project template has been developed to help you kick start your project and
 # Load the data and the packages you will use
 
 ```{r}
-load("old/Final_Project_ESC.RData", verbose=T)
+load("Final_Project_ESC.RData", verbose=T)
 
 suppressPackageStartupMessages({
     library(e1071)
-    library(PhosR) 
     library(ggplot2)
     library(ROCR)
     library(dplyr)

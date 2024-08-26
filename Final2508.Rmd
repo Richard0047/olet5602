@@ -1,6 +1,6 @@
- Factor Target Gene Prediction through
-  Multi-Omics Datasets"
-author: "A. Kapoor, D. Langreiter"
+---
+title: Factor Target Gene Prediction through Multi-Omics Datasets"
+author: "A. Kapoor, D. Langreiter, S. Udit"
 output:
   pdf_document: default
   html_document: default
@@ -23,10 +23,6 @@ In this project, we utilize high-temporal-resolution multi-omics data of ESC dif
 
 We will develop and validate a classification model to predict novel transcription factor target genes, focusing on Sox2 and Nanog, using the provided multi-omics datasets.
 
-# Data Preparation
-
-
-
 ## Load Required Libraries and Data
 
 We start by loading the necessary R packages and the dataset `Final_Project_ESC.RData`, which contains the transcriptome, proteome, and epigenome data, along with a subset of known Sox2/Nanog target genes.
@@ -39,9 +35,6 @@ knitr::opts_chunk$set(echo = TRUE)
 # Load necessary packages and data
 load("Final_Project_ESC.RData", verbose = TRUE)
 
-#Install the calibrate Package
-install.packages("calibrate")
-library(calibrate)
 
 suppressPackageStartupMessages({
     library(e1071)
@@ -58,19 +51,20 @@ suppressPackageStartupMessages({
     library(xgboost)
     library(pROC)
     library(doParallel)
+    library(calibrate)
 })
 
 ```
-#Describe and explore the Data set details
-#Transcriptome
+## Describe and explore the Data set details
+Before beginning data analysis it is important understand and investigate the data. The goal of this report is to predict to predict novel transcription factor target genes from multi-omics data. For each of our datasets lets look at the strcuture of the data and perform PCA Analysis.
 
+
+### Transcriptome
+
+```{r}
 head(Transcriptome)
 dim(Transcriptome)
 colnames(Transcriptome)
-
-# Load necessary libraries
-library(ggplot2)
-library(calibrate)
 
 # PCA analysis on the correlation matrix of the transcriptome data
 cor.mat <- cor(Transcriptome)
@@ -89,7 +83,11 @@ plot(pca.mat$x[,1], pca.mat$x[,2], col=grp.col[grp], pch=19, cex=2,
 # Add sample labels to the plot
 calibrate::textxy(pca.mat$x[,1], pca.mat$x[,2], labs=grp, cex=0.5)
 
-#Proteome
+```
+
+#### Proteome
+
+```{r}
 cor.proteome <- cor(Proteome)
 pca.proteome <- prcomp(cor.proteome)
 summary(pca.proteome)$importance
@@ -108,8 +106,12 @@ plot(pca.proteome$x[,1], pca.proteome$x[,2], col=grp.col[grp], pch=19, cex=2,
      xlab=paste0("PC1 (", round(summary(pca.proteome)$importance[2,1]*100,1), "% variance)"),
      ylab=paste0("PC2 (", round(summary(pca.proteome)$importance[2,2]*100,1), "% variance)"))
 
-#General PCA and Plotting Code for Epigenome Data
-#h3k4me3
+```
+
+
+#### h3k4me3
+
+```{r}
 # PCA analysis on the correlation matrix of the H3K4me3 data
 cor.h3k4me3 <- cor(H3K4me3)
 pca.h3k4me3 <- prcomp(cor.h3k4me3)
@@ -127,10 +129,17 @@ plot(pca.h3k4me3$x[,1], pca.h3k4me3$x[,2], col=grp.col[grp], pch=19, cex=2,
 # Add sample labels to the plot
 calibrate::textxy(pca.h3k4me3$x[,1], pca.h3k4me3$x[,2], labs=grp, cex=0.5)
 
+```
+
 #H3K27me3
+
+
 # PCA analysis for H3K27me3 data
 cor.h3k27me3 <- cor(H3K27me3)
 pca.h3k27me3 <- prcomp(cor.h3k27me3)
+
+cor.h3k27ac <- cor(h3k27ac)
+pca.h3k27ac <- prcomp(cor.h3k27ac)
 
 # Update group labels and colors for H3K27ac
 grp.h3k27ac <- rownames(pca.h3k27ac$x)
@@ -145,7 +154,11 @@ plot(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], col=grp.col.h3k27ac[grp.h3k27ac], pch
 # Correctly label the samples for H3K27ac
 calibrate::textxy(pca.h3k27ac$x[,1], pca.h3k27ac$x[,2], labs=grp.h3k27ac, cex=0.5)
 
+
+
 #H3K4me1
+
+```{r}
 # PCA analysis for H3K4me1 data
 cor.h3k4me1 <- cor(H3K4me1)
 pca.h3k4me1 <- prcomp(cor.h3k4me1)
@@ -162,8 +175,11 @@ plot(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], col=grp.col.h3k4me1[grp.h3k4me1], pch
 
 # Correctly label the samples for H3K4me1
 calibrate::textxy(pca.h3k4me1$x[,1], pca.h3k4me1$x[,2], labs=grp.h3k4me1, cex=0.5)
+```
 
 #H3K9me2
+
+```{r}
 # PCA analysis for H3K9me2 data
 cor.h3k9me2 <- cor(H3K9me2)
 pca.h3k9me2 <- prcomp(cor.h3k9me2)
@@ -181,8 +197,12 @@ plot(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], col=grp.col.h3k9me2[grp.h3k9me2], pch
 # Correctly label the samples for H3K9me2
 calibrate::textxy(pca.h3k9me2$x[,1], pca.h3k9me2$x[,2], labs=grp.h3k9me2, cex=0.5)
 
+```
+
 
 #PolII
+
+```{r}
 # PCA analysis for PolII data
 cor.polii <- cor(PolII)
 pca.polii <- prcomp(cor.polii)
@@ -199,7 +219,7 @@ plot(pca.polii$x[,1], pca.polii$x[,2], col=grp.col.polii[grp.polii], pch=19, cex
 
 # Correctly label the samples for PolII
 calibrate::textxy(pca.polii$x[,1], pca.polii$x[,2], labs=grp.polii, cex=0.5)
-
+```
 
 
 ## Filter and Combine Datasets
