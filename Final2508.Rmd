@@ -30,16 +30,24 @@ The aim of the project is to classify genes as targets for novel transcription f
 
 This is a particularly important, and ongoing, area of research as there is some evidence that OSN factors are regulators of stem cell maintenance.
 
-**Data**
+**Background:**
 
 **Background:**
-  Transcriptional regulation is a fundamental ess in all living organisms, driven by transcription factors that control mRNA expression. These transcriptional networks are crucial in development, lineage specification, and cell fate decisions during early embryonic development ([Theunissen and Jaenisch, 2017](https://doi.org/10.1038/nrm.2017.15)). Recent advances in omics technologies allow for the profiling of genome-wide transcriptional and epigenetic events, providing a deeper understanding of these networks.
 
-In this project, we utilize high-temporal-resolution multi-omics data of ESC differentiation ([Yang et al., 2019](https://doi.org/10.1016/j.cell.2019.02.035)) to predict novel substrates of Sox2 and Nanog—two key transcription factors involved in maintaining pluripotency and guiding cell differentiation.
+Embryonic stem cells (ESCs) are remarkable for their ability to differentiate into a diverse array of cell types, a process fundamental to development and regenerative medicine. The regulation of ESC differentiation and cell fate decisions is intricately controlled by transcription factors, such as Sox2 and Nanog, which maintain pluripotency and guide the transition from undifferentiated states to specialized cell types. These transcription factors operate within complex transcriptional networks that influence gene expression through direct binding to DNA and interaction with other regulatory proteins ([Theunissen and Jaenisch, 2017](https://doi.org/10.1038/nrm.2017.15)).
+
+Transcriptional regulation is crucial in defining cell identity and function during differentiation. Transcription factors can act as activators or repressors, modulating the expression of genes that drive cell lineage specification. Multiple studies have shown that Sox2 ([Masui et al., 2007](https://doi.org/10.1038/nature06015)) and Nanog ([Masui et al., 2007](https://doi.org/10.1038/nature06015)) are key regulators of stem cell maintenance and differentiation. Oct4, Sox2, and Nanog, collectively known as the 'OSN' factors, are well-established in their roles as regulators of stem cell maintenance ([Yeo and Ng, 2012](https://doi.org/10.1038/nrm3430)).
+
+Recent advancements in omics technologies have enabled high-temporal-resolution profiling of genome-wide transcriptional and epigenetic events. The time-course multi-omic profiling of ESC differentiation provides a unique opportunity to reveal previously unknown aspects of stem cells during pluripotency progression ([Yang et al., 2019](https://doi.org/10.1016/j.cell.2019.02.035)). Multi-omics approaches, integrating genomics, transcriptomics, proteomics, and epigenomics, offer unprecedented insights into the regulatory networks governing pluripotency and differentiation.
+
+In this study, we aim to predict novel target genes of Sox2 and Nanog by leveraging high-temporal-resolution multi-omics data from ESC differentiation experiments. By analyzing changes in gene expression, protein interactions, and epigenetic modifications, we seek to identify new substrates of these critical transcription factors. This approach will enhance our understanding of the transcriptional regulation of ESC differentiation and contribute to the development of more precise strategies for manipulating stem cell behavior in regenerative medicine.
+
 
 **Dataset Overview:**
 
 The data collects time-course differentiation of genes at various omics layers. The ones that the study will focus on are below.
+
+For the Purposes of this study we refer to OSN Labels as genes that target for transcription factors: Sox2 and Nanog.
 
 - **Transcriptome:** Time-course mRNA profiles during ESC differentiation.
 
