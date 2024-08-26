@@ -1,6 +1,6 @@
 ---
-title: Factor Target Gene Prediction through Multi-Omics Datasets
-subtitle: Hello
+title: Novel Factor Target Gene Prediction
+subtitle: through Multi-Omics Datasets
 author: "A. Kapoor, D. Langreiter, S. Udit, L. Richard"
 date: "University of Sydney | OLET5602 | `r format(Sys.time(), '%B, %Y')`"
 output:
@@ -26,7 +26,11 @@ header-includes:
 # Introduction
 
 **Aim:**
-The aim of this project is to apply classification techniques to predict novel transcription factor target genes, focusing on Sox2 and Nanog during embryonic stem cell (ESC) differentiation from muliomics data.
+The aim of the project is to classify genes as targets for novel transcription factors. The focus of the study in particularly on Sox2 and Nanog (of the OSN Factors::w Oct4, Sox2, Nanog) embryonic stem cell (ESC) differentiation. 
+
+This is a particularly important, and ongoing, area of research as there is some evidence that OSN factors are regulators of stem cell maintenance.
+
+**Data**
 
 **Background:**
   Transcriptional regulation is a fundamental ess in all living organisms, driven by transcription factors that control mRNA expression. These transcriptional networks are crucial in development, lineage specification, and cell fate decisions during early embryonic development ([Theunissen and Jaenisch, 2017](https://doi.org/10.1038/nrm.2017.15)). Recent advances in omics technologies allow for the profiling of genome-wide transcriptional and epigenetic events, providing a deeper understanding of these networks.
@@ -34,11 +38,14 @@ The aim of this project is to apply classification techniques to predict novel t
 In this project, we utilize high-temporal-resolution multi-omics data of ESC differentiation ([Yang et al., 2019](https://doi.org/10.1016/j.cell.2019.02.035)) to predict novel substrates of Sox2 and Nanog—two key transcription factors involved in maintaining pluripotency and guiding cell differentiation.
 
 **Dataset Overview:**
-- **Transcriptome:** Time-course mRNA profiles during ESC differentiation.
-- **Proteome:** Time-course protein expression profiles during ESC differentiation.
-- **Epigenome:** Time-course ESC differentation epigonme profiles of 6 histone marks.
 
-We will develop and validate a classification model to predict novel transcription factor target genes, focusing on Sox2 and Nanog, using the provided multi-omics datasets.
+The data collects time-course differentiation of genes at various omics layers. The ones that the study will focus on are below.
+
+- **Transcriptome:** Time-course mRNA profiles during ESC differentiation.
+
+- **Proteome:** Time-course protein expression profiles during ESC differentiation.
+
+- **Epigenome:** Time-course ESC differentation epigonme profiles of 6 histone marks.
 
 # EDA
 ## Load Required Libraries and Data
