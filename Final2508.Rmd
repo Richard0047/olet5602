@@ -166,13 +166,17 @@ Train SVM and Random Forest Models
 We train two machine learning models, SVM and Random Forest, using the balanced training dataset.
 
 ```{r}
-# Train an SVM model on the downsampled training data
+# Set a consistent seed
 set.seed(123)
+```
+
+```{r}
+# Train an SVM model on the downsampled training data with radial basis function kernel
 svm_model <- svm(label ~ ., data = downsampled_train_data, kernel = "radial", probability = TRUE)
 
 # Train a Random Forest model on the downsampled training data
 set.seed(123)
-rf_model <- randomForest(label ~ ., data = downsampled_train_data, ntree = 500)
+rf_model <- randomForest(label ~ ., data = downsampled_train_data, ntree = 1000)
 
 ```
 
