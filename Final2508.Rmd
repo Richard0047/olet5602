@@ -1,6 +1,6 @@
 ---
 title: Factor Target Gene Prediction through Multi-Omics Datasets"
-author: "A. Kapoor, D. Langreiter, S. Udit"
+author: "A. Kapoor, D. Langreiter, U. Samant"
 output:
   pdf_document: default
   html_document: default
@@ -56,7 +56,8 @@ suppressPackageStartupMessages({
 
 ```
 # Describe and explore the Data set details
-Before beginning data analysis it is important understand and investigate the data. The goal of this report is to predict to predict novel transcription factor target genes from multi-omics data. For each of our datasets lets look at the strcuture of the data and perform PCA Analysis as means of identifying trends in the dataset.
+
+Before beginning data analysis it is important understand and investigate the data. The goal of this report is to predict to predict novel transcription factor target genes from multi-omics data. For each of our datasets, one can look at the structure of the data and perform PCA Analysis as means of identifying trends in the dataset.
 
 
 ## Transcriptome
@@ -155,6 +156,7 @@ calibrate::textxy(pca.h3k27me3$x[,1], pca.h3k27me3$x[,2], labs=grp.h3k27me3, cex
 ```
 
 ## H3K27ac
+
 ```{r}
 
 # PCA analysis for H3K27ac data
@@ -261,7 +263,6 @@ genes <- intersect(genes, rownames(PolII))
 ```
 
 
-
 ```{r}
 # Filter each dataset for the common genes
 Transcriptome_filter <- Transcriptome[genes, ]
@@ -350,6 +351,7 @@ print(table(test_data$label))
 ```
 
 ### Balancing the Training Data
+
 Since the dataset is imbalanced, downsampling is used to create a balanced training dataset. This ensures that both classes (OSN and Other) are equally represented, improving the robustness of the classification model.
 
 ```{r}
@@ -371,7 +373,7 @@ print(dim(downsampled_train_data))
 ```
 
 ## Model Training
-Train SVM and Random Forest Models
+
 We train two machine learning models, SVM (with the radial kernel) and Random Forest, using the balanced training dataset.
 
 ```{r}
@@ -428,7 +430,7 @@ train_control <- trainControl(
   verboseIter = TRUE,
   allowParallel = TRUE
 )
-```
+
 xgb_model_tuned <- train(
   label ~ .,
   data = downsampled_train_data,
@@ -445,6 +447,7 @@ print(xgb_model_tuned$bestTune)
 ## Plotting model performance
 plot(xgb_model_tuned)
 :
+```
 
 ## Model Evaluation
 Predictions and Confusion Matrix
