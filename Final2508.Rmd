@@ -35,11 +35,11 @@ knitr::opts_chunk$set(echo = TRUE)
 # Load necessary packages and data
 load("Final_Project_ESC.RData", verbose = TRUE)
 
-
 suppressPackageStartupMessages({
     library(e1071)
     library(ggplot2)
     library(ROCR)
+    library(calibrate)
     library(dplyr)
     library(tibble)
     library(reshape2)
